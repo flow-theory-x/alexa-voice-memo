@@ -142,6 +142,11 @@ vite.config.ts.timestamp-*
 *.js
 *.d.ts
 
+# Exceptions for public directory
+!public/*.js
+!public/*.html
+!public/*.css
+
 # CDK specific
 cdk.out/
 

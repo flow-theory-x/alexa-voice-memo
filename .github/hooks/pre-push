@@ -1,0 +1,28 @@
+#!/bin/bash
+# Pre-push hook: CI/CDデプロイ前チェック
+echo "🔍 Checking for CI/CD changes..."
+# pushされる変更をチェック
+changed_files=$(git diff HEAD origin/$(git rev-parse --abbrev-ref HEAD) --name-only 2>/dev/null || git diff HEAD --name-only)
+
+if echo "$changed_files" | grep -E "(\.github/workflows/|deploy|ci|cd)" > /dev/null; then
+    echo ""
+    echo "🚨 CI/CD関連の変更を検出しました"
+    echo ""
+    echo "📋 デプロイ前チェックリスト:"
+    echo "  □ ローカルでビルド確認した (npm run build && cdk synth)"
+    echo "  □ 新しいコマンドをローカルで実行した"
+    echo "  □ 環境変数/シークレットを設定した"
+    echo "  □ エラーハンドリングを考慮した"
+    echo ""
+    echo "上記を全て確認しましたか？ (yes/no)"
+    read -r response < /dev/tty
+
+    if [ "$response" != "yes" ]; then
+        echo ""
+        echo "❌ プッシュを中止しました"
+        echo "📖 以下を確認してください:"
+        echo "   - docs/deployment-checklist.md"
+        echo "   - docs/deployment-lessons.md"
+        exit 1
+    fi
+fi

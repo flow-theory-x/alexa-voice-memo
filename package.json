@@ -8,9 +8,13 @@
     "build": "tsc",
     "watch": "tsc -w",
     "test": "jest",
-    "cdk": "cdk"
+    "cdk": "cdk",
+    "deploy:frontend": "aws s3 sync ./public/ s3://$(aws cloudformation describe-stacks --stack-name alexa-voice-memo-${CDK_ENV:-dev} --query 'Stacks[0].Outputs[?OutputKey==`FrontendBucketName`].OutputValue' --output text) --delete",
+    "deploy:ec2": "rsync -avz --delete ./public/ ec2-user@${EC2_HOST}:/var/www/memo/"
   },
   "devDependencies": {
+    "@types/aws-lambda": "^8.10.150",
+    "@types/express": "^5.0.3",
     "@types/jest": "^29.5.14",
     "@types/node": "22.7.9",
     "aws-cdk": "2.1018.1",
@@ -22,7 +26,9 @@
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.844.0",
     "@aws-sdk/lib-dynamodb": "^3.844.0",
+    "@codegenie/serverless-express": "^4.17.0",
     "aws-cdk-lib": "2.200.1",
-    "constructs": "^10.0.0"
+    "constructs": "^10.0.0",
+    "express": "^5.1.0"
   }
 }

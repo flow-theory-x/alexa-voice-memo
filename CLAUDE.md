@@ -155,6 +155,13 @@ cdk destroy alexa-voice-memo-dev # Clean up
 
 ## ⚠️ Important Notes
 
+### 🔍 デプロイ前の必須確認
+**CRITICAL**: デプロイ前には必ず`docs/deployment-checklist.md`を確認すること。
+- ローカルテストを実施したか？
+- 環境変数/シークレットは設定済みか？
+- エラーハンドリングは考慮されているか？
+- 非同期処理の完了待ちは実装されているか？
+
 ### Start Simple Philosophy
 - **Don't over-engineer**: Start with minimal working implementation
 - **Hard-code first**: Use static responses to test flow
@@ -166,6 +173,19 @@ cdk destroy alexa-voice-memo-dev # Clean up
 - **Complex error handling**: Start basic, improve iteratively  
 - **Premature optimization**: Working > fast initially
 - **Scope creep**: Focus on core 3 functions first
+
+### 🚨 デプロイの鉄則：ローカルテストファースト
+
+**重要**: 17分の実装に2時間のデプロイで失敗した教訓から：
+- **必ず** `docs/deployment-checklist.md` を確認
+- **必ず** `docs/deployment-lessons.md` を読む（具体的な失敗例）
+- **鉄則**: 実装時間 < デプロイ時間になったら立ち止まれ
+
+**最低限のローカルテスト**:
+```bash
+npm run build && cdk synth    # CDK変更時
+[new-tool] --help             # 新ツール使用時
+```
 
 ### CDK Best Practices
 - **Environment isolation**: Use CDK_ENV for dev/stg/prod

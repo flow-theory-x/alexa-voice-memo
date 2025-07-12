@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>voiceMEMO</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>voiceMEMO</h1>
+        <button id="menu-btn" class="menu-btn">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </header>
+
+      <!-- ハンバーガーメニュー -->
+      <div id="menu-overlay" class="menu-overlay"></div>
+      <div id="menu-panel" class="menu-panel">
+        <ul class="menu-list">
+          <li><button id="add-memo-btn" class="menu-item">メモ追加</button></li>
+          <li><button id="delete-all-btn" class="menu-item">全件削除</button></li>
+          <li><button id="permanent-delete-btn" class="menu-item">完全削除</button></li>
+          <li><button id="help-btn" class="menu-item">ヘルプ</button></li>
+        </ul>
+      </div>
+
+      <!-- ヘルプモーダル -->
+      <div id="help-modal" class="modal">
+        <div class="modal-content">
+          <h2>Voice Memoの使い方</h2>
+          <div class="help-section">
+            <h3>基本操作</h3>
+            <ul>
+              <li>下に引っ張る: リフレッシュ</li>
+              <li>左スワイプ: 削除（削除済みは完全削除）</li>
+              <li>右スワイプ: 編集（削除済みは復元）</li>
+            </ul>
+          </div>
+          <div class="help-section">
+            <h3>Alexaアプリ</h3>
+            <p>「アレクサ、ボイスメモで〇〇をメモして」と話しかけるだけで、音声でメモを追加できます。</p>
+          </div>
+          <button id="close-help-btn" class="close-btn">閉じる</button>
+        </div>
+      </div>
+
+      <div id="pull-to-refresh" class="pull-to-refresh">
+        <div class="spinner"></div>
+      </div>
+
+      <main>
+        <div id="memo-list" class="memo-list">
+          <!-- メモがここに表示されます -->
+        </div>
+
+        <div id="empty-state" class="empty-state" style="display: none">
+          <div class="empty-icon">📝</div>
+          <h2>メモがありません</h2>
+          <p>
+            「アレクサ、ボイスメモで〇〇をメモして」<br />と話しかけてメモを追加しましょう
+          </p>
+        </div>
+
+        <div id="loading" class="loading">
+          <div class="spinner"></div>
+        </div>
+
+        <div id="error" class="error" style="display: none">
+          <p>エラーが発生しました</p>
+          <button onclick="loadMemos()">再読み込み</button>
+        </div>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

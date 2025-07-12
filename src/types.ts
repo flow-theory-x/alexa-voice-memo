@@ -11,6 +11,7 @@ export interface AlexaSession {
   sessionId: string;
   application: { applicationId: string };
   user: { userId: string };
+  attributes?: { [key: string]: any };
 }
 
 export interface AlexaContext {

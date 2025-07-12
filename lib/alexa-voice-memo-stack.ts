@@ -3,6 +3,9 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import { Construct } from 'constructs';
 
 export interface AlexaVoiceMemoStackProps extends cdk.StackProps {
@@ -72,8 +75,8 @@ export class AlexaVoiceMemoStack extends cdk.Stack {
     this.alexaLambda = new lambda.Function(this, 'Handler', {
       functionName: `${projectName}-${environment}-handler`,
       runtime: lambda.Runtime.NODEJS_20_X,
-      handler: 'handler.handler',
-      code: lambda.Code.fromAsset('src'),
+      handler: 'src/handler.handler',
+      code: lambda.Code.fromAsset('dist'),
       role: this.alexaRole,
       memorySize: 256,
       timeout: cdk.Duration.seconds(30),
@@ -99,6 +102,96 @@ export class AlexaVoiceMemoStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'LambdaFunctionArn', {
       value: this.alexaLambda.functionArn,
       description: 'Lambda function ARN for Alexa Skills Kit',
+    });
+
+    // Web API Lambda
+    const webApiHandler = new lambda.Function(this, 'WebApiHandler', {
+      functionName: `${projectName}-${environment}-web-api`,
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'index.handler',
+      code: lambda.Code.fromAsset('dist/web-api'),
+      timeout: cdk.Duration.seconds(30),
+      memorySize: 256,
+      environment: {
+        MEMO_TABLE_NAME: this.memoTable.tableName,
+      },
+    });
+
+    // Grant Web API Lambda permissions to access DynamoDB
+    this.memoTable.grantReadWriteData(webApiHandler);
+
+    // API Gateway for Web UI
+    const webApi = new apigateway.RestApi(this, 'WebApi', {
+      restApiName: `${projectName}-web-api-${environment}`,
+      deployOptions: {
+        stageName: environment,
+      },
+    });
+
+    // /api/memos resource
+    const memosResource = webApi.root.addResource('api').addResource('memos');
+    
+    // GET /api/memos
+    memosResource.addMethod('GET', new apigateway.LambdaIntegration(webApiHandler));
+    
+    // POST /api/memos
+    memosResource.addMethod('POST', new apigateway.LambdaIntegration(webApiHandler));
+    
+    // DELETE /api/memos/{id}
+    const memoIdResource = memosResource.addResource('{id}');
+    memoIdResource.addMethod('DELETE', new apigateway.LambdaIntegration(webApiHandler));
+    
+    // PUT /api/memos/{id} - 編集
+    memoIdResource.addMethod('PUT', new apigateway.LambdaIntegration(webApiHandler));
+    
+    // PUT /api/memos/{id}/restore
+    const restoreResource = memoIdResource.addResource('restore');
+    restoreResource.addMethod('PUT', new apigateway.LambdaIntegration(webApiHandler));
+    
+    // OPTIONS for CORS
+    memosResource.addMethod('OPTIONS', new apigateway.LambdaIntegration(webApiHandler));
+    memoIdResource.addMethod('OPTIONS', new apigateway.LambdaIntegration(webApiHandler));
+    restoreResource.addMethod('OPTIONS', new apigateway.LambdaIntegration(webApiHandler));
+
+    // Output the API endpoint
+    new cdk.CfnOutput(this, 'WebApiUrl', {
+      value: webApi.url,
+      description: 'Web API endpoint URL',
+    });
+
+    // ===== S3 Bucket for Frontend Deployment =====
+    const frontendBucket = new s3.Bucket(this, 'FrontendBucket', {
+      bucketName: `${projectName}-${environment}-frontend`,
+      publicReadAccess: true,
+      blockPublicAccess: new s3.BlockPublicAccess({
+        blockPublicAcls: false,
+        blockPublicPolicy: false,
+        ignorePublicAcls: false,
+        restrictPublicBuckets: false,
+      }),
+      websiteIndexDocument: 'index.html',
+      websiteErrorDocument: 'error.html',
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
+    });
+
+    // Deploy frontend files to S3
+    new s3deploy.BucketDeployment(this, 'FrontendDeployment', {
+      sources: [s3deploy.Source.asset('./public')],
+      destinationBucket: frontendBucket,
+      retainOnDelete: false,
+    });
+
+    // Output the S3 website URL
+    new cdk.CfnOutput(this, 'FrontendUrl', {
+      value: frontendBucket.bucketWebsiteUrl,
+      description: 'Frontend S3 website URL',
+    });
+
+    // Output the S3 bucket name for deployment scripts
+    new cdk.CfnOutput(this, 'FrontendBucketName', {
+      value: frontendBucket.bucketName,
+      description: 'S3 bucket name for frontend deployment',
     });
   }
 }
