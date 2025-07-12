@@ -137,3 +137,17 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# TypeScript compiled files
+*.js
+*.d.ts
+
+# CDK specific
+cdk.out/
+
+# Test output files  
+test/responses/
+test/fixtures/
+
+# AWS specific
+.aws/
