@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alexa Voice Memo - 音声でメモを管理</title>
+    <style>
+        body { 
+            font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif; 
+            margin: 0; padding: 0; 
+            line-height: 1.6; 
+            background-color: #f8f9fa;
+        }
+        .container { 
+            max-width: 1000px; 
+            margin: 0 auto; 
+            padding: 20px;
+        }
+        .header { 
+            background: linear-gradient(135deg, #232F3E 0%, #37475A 100%);
+            color: white; 
+            padding: 40px 20px; 
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .header h1 { 
+            margin: 0; 
+            font-size: 2.5em; 
+            font-weight: bold;
+        }
+        .header p { 
+            margin: 10px 0 0 0; 
+            font-size: 1.2em; 
+            opacity: 0.9;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+        .feature-card {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .feature-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        .footer {
+            background-color: #232F3E;
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+            margin-top: 60px;
+        }
+        .footer a {
+            color: #FF9900;
+            text-decoration: none;
+            margin: 0 15px;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        .status-badge {
+            background-color: #28a745;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            display: inline-block;
+            margin: 10px 0;
+        }
+        .version {
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎤 Alexa Voice Memo</h1>
+        <p>音声でメモを簡単に管理できるAlexaスキル</p>
+        <div class="status-badge">✅ Production Ready</div>
+        <div class="version">Version 1.0.0</div>
+    </div>
+
+    <div class="container">
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-icon">📝</div>
+                <h3>メモ追加</h3>
+                <p>「牛乳を買うをメモして」と話すだけで、簡単にメモを追加できます。</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">📢</div>
+                <h3>メモ読み上げ</h3>
+                <p>「メモを読んで」と言えば、保存されているメモを順番に読み上げます。</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">🗑️</div>
+                <h3>メモ削除</h3>
+                <p>「1番目のメモを削除」のように番号を指定して削除できます。</p>
+            </div>
+        </div>
+
+        <div style="background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin: 40px 0;">
+            <h2 style="text-align: center; color: #232F3E; margin-bottom: 30px;">使い方</h2>
+            <div style="text-align: center;">
+                <p style="font-size: 1.1em; margin: 15px 0;">
+                    <strong>1.</strong> 「アレクサ、ボイスメモを開いて」
+                </p>
+                <p style="font-size: 1.1em; margin: 15px 0;">
+                    <strong>2.</strong> 「牛乳を買うをメモして」
+                </p>
+                <p style="font-size: 1.1em; margin: 15px 0;">
+                    <strong>3.</strong> 「メモを読んで」
+                </p>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin: 40px 0;">
+            <h2 style="color: #232F3E;">技術仕様</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 20px;">
+                <div>
+                    <h4>🏗️ インフラ</h4>
+                    <p>AWS CDK + Lambda + DynamoDB</p>
+                </div>
+                <div>
+                    <h4>⚡ パフォーマンス</h4>
+                    <p>平均応答時間 < 600ms</p>
+                </div>
+                <div>
+                    <h4>💰 コスト</h4>
+                    <p>月額 < $0.03</p>
+                </div>
+                <div>
+                    <h4>🔒 セキュリティ</h4>
+                    <p>DynamoDB 暗号化対応</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <h3>Legal & Documentation</h3>
+        <div>
+            <a href="privacy-policy.html">プライバシーポリシー</a>
+            <a href="terms-of-use.html">利用規約</a>
+            <a href="https://github.com/flow-theory-x/alexa-voice-memo">GitHub Repository</a>
+        </div>
+        <p style="margin-top: 20px; font-size: 0.9em; opacity: 0.8;">
+            © 2025 Alexa Voice Memo | Built with ideanotes スモールスタート原則
+        </p>
+    </div>
+</body>
+</html>

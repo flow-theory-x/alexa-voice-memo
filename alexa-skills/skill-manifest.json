@@ -71,8 +71,8 @@
       "containsAds": false,
       "locales": {
         "ja-JP": {
-          "privacyPolicyUrl": "https://example.com/privacy-policy",
-          "termsOfUseUrl": "https://example.com/terms-of-use"
+          "privacyPolicyUrl": "https://flow-theory-x.github.io/alexa-voice-memo/privacy-policy",
+          "termsOfUseUrl": "https://flow-theory-x.github.io/alexa-voice-memo/terms-of-use"
         }
       }
     },
