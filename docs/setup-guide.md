@@ -57,15 +57,58 @@ cdk bootstrap aws://$CDK_ACCOUNT/$CDK_REGION
 
 ## 📁 Project Initialization
 
-### 1. CDK Project Setup
+### 🎯 Important: Correct Setup Order
+
+**⚠️ CRITICAL**: CDK initialization must be done in an empty directory!
+
+Refer to [Project Setup Lessons Learned](./project-setup-lessons.md) for detailed explanation of why this matters.
+
+#### Recommended Approach (Clean Start)
 ```bash
-# Initialize CDK TypeScript project
+# 1. Create empty project directory
+mkdir alexa-voice-memo
+cd alexa-voice-memo
+
+# 2. Initialize CDK (must be empty!)
 cdk init app --language typescript
 
-# Verify project structure
+# 3. Verify project structure
 ls -la
 # Should see: bin/, lib/, test/, cdk.json, package.json, etc.
+
+# 4. Initialize Git
+git init
+git add .
+git commit -m "Initial CDK TypeScript project"
+
+# 5. Add documentation
+mkdir docs
+# Add your documentation files
+git add docs/
+git commit -m "Add project documentation"
 ```
+
+#### Alternative: Existing Repository Setup
+```bash
+# If you already have a repository with docs:
+
+# 1. Backup existing files
+mkdir backup
+mv docs/ CLAUDE.md README.md backup/
+
+# 2. Initialize CDK in now-empty directory
+cdk init app --language typescript
+
+# 3. Restore important files
+cp -r backup/docs .
+cp backup/CLAUDE.md .
+# Merge or replace README.md as needed
+
+# 4. Clean up
+rm -rf backup/
+```
+
+### 1. CDK Project Setup (Legacy Documentation)
 
 ### 2. Dependencies Installation
 ```bash
