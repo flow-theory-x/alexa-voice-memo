@@ -1,0 +1,81 @@
+{
+  "manifest": {
+    "publishingInformation": {
+      "locales": {
+        "ja-JP": {
+          "name": "ボイスメモ",
+          "summary": "音声でメモを簡単に管理。追加、確認、削除が可能。",
+          "description": "ボイスメモは、音声でメモを管理できるシンプルなスキルです。\n\n主な機能：\n• メモの追加：「○○をメモして」と話しかけるだけで、簡単にメモを追加できます。\n• メモの確認：「メモを読んで」と言えば、保存されているメモを順番に読み上げます。\n• メモの削除：「1番目のメモを削除」のように番号を指定して削除できます。\n\n買い物リスト、ToDo、アイデアなど、思いついたことをすぐにメモできます。\n\n使い方の例：\n「アレクサ、ボイスメモを開いて」\n「牛乳を買うをメモして」\n「メモを読んで」\n「1番目のメモを削除」\n\nシンプルで使いやすい音声メモアプリです。",
+          "examplePhrases": [
+            "アレクサ、ボイスメモを開いて",
+            "アレクサ、ボイスメモで牛乳を買うをメモして",
+            "アレクサ、ボイスメモでメモを読んで"
+          ],
+          "keywords": [
+            "メモ",
+            "ボイスメモ",
+            "音声メモ",
+            "リマインダー",
+            "買い物リスト",
+            "ToDo",
+            "タスク管理",
+            "メモ帳",
+            "備忘録",
+            "記録"
+          ],
+          "smallIconUri": "https://s3.amazonaws.com/CAPS-SSE/echo_developer/1234/5678901234567890123456789012345678901234567890123456789012345678/APP_ICON_108.png",
+          "largeIconUri": "https://s3.amazonaws.com/CAPS-SSE/echo_developer/1234/5678901234567890123456789012345678901234567890123456789012345678/APP_ICON_512.png",
+          "updatesDescription": "初回リリース"
+        }
+      },
+      "isAvailableWorldwide": false,
+      "distributionCountries": ["JP"],
+      "testingInstructions": "このスキルは音声でメモを管理するシンプルなアプリケーションです。\n\nテスト手順：\n1. 「アレクサ、ボイスメモを開いて」でスキルを起動\n2. 「牛乳を買うをメモして」でメモを追加\n3. 「メモを読んで」で保存されたメモを確認\n4. 「1番目のメモを削除」でメモを削除\n\n各機能が正しく動作することを確認してください。",
+      "category": "PRODUCTIVITY",
+      "distributionMode": "PUBLIC",
+      "automaticDistribution": {
+        "isActive": false
+      }
+    },
+    "apis": {
+      "custom": {
+        "endpoint": {
+          "uri": "arn:aws:lambda:ap-northeast-1:498997347996:function:alexa-voice-memo-dev-handler"
+        },
+        "interfaces": [],
+        "regions": {
+          "NA": {
+            "endpoint": {
+              "uri": "arn:aws:lambda:ap-northeast-1:498997347996:function:alexa-voice-memo-dev-handler"
+            }
+          },
+          "EU": {
+            "endpoint": {
+              "uri": "arn:aws:lambda:ap-northeast-1:498997347996:function:alexa-voice-memo-dev-handler"
+            }
+          },
+          "FE": {
+            "endpoint": {
+              "uri": "arn:aws:lambda:ap-northeast-1:498997347996:function:alexa-voice-memo-dev-handler"
+            }
+          }
+        }
+      }
+    },
+    "manifestVersion": "1.0",
+    "privacyAndCompliance": {
+      "allowsPurchases": false,
+      "usesPersonalInfo": false,
+      "isChildDirected": false,
+      "isExportCompliant": true,
+      "containsAds": false,
+      "locales": {
+        "ja-JP": {
+          "privacyPolicyUrl": "https://example.com/privacy-policy",
+          "termsOfUseUrl": "https://example.com/terms-of-use"
+        }
+      }
+    },
+    "permissions": []
+  }
+}

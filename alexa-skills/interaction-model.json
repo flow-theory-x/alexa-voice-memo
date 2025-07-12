@@ -1,0 +1,155 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "ボイスメモ",
+      "intents": [
+        {
+          "name": "AddMemoIntent",
+          "slots": [
+            {
+              "name": "memoText",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "{memoText} をメモして",
+            "{memoText} をメモに追加",
+            "{memoText} を覚えておいて",
+            "メモ {memoText}",
+            "{memoText} メモ",
+            "{memoText} を追加して",
+            "{memoText} を保存して",
+            "{memoText} を記録して"
+          ]
+        },
+        {
+          "name": "ReadMemosIntent",
+          "slots": [],
+          "samples": [
+            "メモを読んで",
+            "メモを教えて",
+            "メモを確認",
+            "メモの内容は",
+            "メモ一覧",
+            "メモを読み上げて",
+            "メモを聞かせて",
+            "保存したメモは",
+            "メモはある",
+            "メモを表示"
+          ]
+        },
+        {
+          "name": "DeleteMemoIntent",
+          "slots": [
+            {
+              "name": "memoNumber",
+              "type": "AMAZON.NUMBER"
+            }
+          ],
+          "samples": [
+            "{memoNumber} 番目のメモを削除",
+            "{memoNumber} 番のメモを消して",
+            "メモ {memoNumber} を削除",
+            "{memoNumber} 番目を消して",
+            "{memoNumber} 番を削除",
+            "{memoNumber} 番目のメモを削除して",
+            "メモの {memoNumber} 番を消して",
+            "{memoNumber} を削除"
+          ]
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": [
+            "ヘルプ",
+            "使い方",
+            "どうやって使うの",
+            "何ができるの"
+          ]
+        },
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": [
+            "キャンセル",
+            "やめる",
+            "中止"
+          ]
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": [
+            "ストップ",
+            "終了",
+            "閉じて",
+            "バイバイ"
+          ]
+        }
+      ],
+      "types": []
+    },
+    "dialog": {
+      "intents": [
+        {
+          "name": "AddMemoIntent",
+          "confirmationRequired": false,
+          "prompts": {},
+          "slots": [
+            {
+              "name": "memoText",
+              "type": "AMAZON.SearchQuery",
+              "confirmationRequired": false,
+              "elicitationRequired": true,
+              "prompts": {
+                "elicitation": "Elicit.Slot.AddMemoIntent.memoText"
+              }
+            }
+          ]
+        },
+        {
+          "name": "DeleteMemoIntent",
+          "confirmationRequired": false,
+          "prompts": {},
+          "slots": [
+            {
+              "name": "memoNumber",
+              "type": "AMAZON.NUMBER",
+              "confirmationRequired": false,
+              "elicitationRequired": true,
+              "prompts": {
+                "elicitation": "Elicit.Slot.DeleteMemoIntent.memoNumber"
+              }
+            }
+          ]
+        }
+      ],
+      "delegationStrategy": "ALWAYS"
+    },
+    "prompts": [
+      {
+        "id": "Elicit.Slot.AddMemoIntent.memoText",
+        "variations": [
+          {
+            "type": "PlainText",
+            "value": "何をメモしますか？"
+          },
+          {
+            "type": "PlainText",
+            "value": "メモしたい内容を教えてください。"
+          }
+        ]
+      },
+      {
+        "id": "Elicit.Slot.DeleteMemoIntent.memoNumber",
+        "variations": [
+          {
+            "type": "PlainText",
+            "value": "何番目のメモを削除しますか？"
+          },
+          {
+            "type": "PlainText",
+            "value": "削除するメモの番号を教えてください。"
+          }
+        ]
+      }
+    ]
+  }
+}
