@@ -1,13 +1,14 @@
 # Alexa Voice Memo - CDK実装仕様書
 
-*2025-07-12*
+*2025-07-13 - Updated to reflect current implementation*
 
 ## 🎯 実装方針
 
 ### アーキテクチャ戦略
 - **アプリケーション**: 独立リポジトリ（`alexa-voice-memo`）で開発
-- **インフラ**: 独立CDKプロジェクトで管理
+- **インフラ**: CDKで完全管理（Web UI + API + Alexa統合）
 - **管理方針**: 完全独立管理（bootstrapのみ共有）
+- **デプロイ**: GitHub Actions CI/CDによるS3自動デプロイ
 
 ### 既存CDK環境活用
 - **Bootstrap**: web3cdkの既存bootstrap活用（同一AWSアカウント・リージョン）
@@ -27,8 +28,13 @@ export interface AlexaVoiceMemoStackProps extends cdk.StackProps {
 
 export class AlexaVoiceMemoStack extends cdk.Stack {
   public readonly alexaLambda: lambda.Function;
+  public readonly webApiLambda: lambda.Function;
   public readonly memoTable: dynamodb.Table;
   public readonly alexaRole: iam.Role;
+  public readonly webApiRole: iam.Role;
+  public readonly s3Bucket: s3.Bucket;
+  public readonly api: apigateway.RestApi;
+  public readonly distribution: cloudfront.Distribution;
 }
 ```
 
@@ -42,9 +48,15 @@ export class AlexaVoiceMemoStack extends cdk.Stack {
 グローバルセカンダリインデックス: 
   - timestamp-index (timestamp用)
   - status-index (deleted用)
+属性:
+  - deletedAt: 論理削除日時（TTL用）
+  - deleted: 論理削除フラグ
+  - isPermanentDeleted: 完全削除フラグ
 ```
 
 #### 2. Lambda 関数
+
+##### Alexa Handler Lambda
 ```yaml
 関数名: alexa-voice-memo-{env}-handler
 ランタイム: Node.js 20.x
@@ -55,13 +67,73 @@ export class AlexaVoiceMemoStack extends cdk.Stack {
   - ENVIRONMENT: dev/stg/prod
 ```
 
-#### 3. IAM ロール
+##### Web API Lambda
 ```yaml
-ロール名: alexa-voice-memo-{env}-lambda-role
+関数名: alexa-voice-memo-{env}-web-api
+ランタイム: Node.js 20.x
+メモリ: 512MB
+タイムアウト: 30秒
+環境変数:
+  - MEMO_TABLE_NAME: DynamoDBテーブル名
+  - ENVIRONMENT: dev/stg/prod
+  - CORS_ORIGIN: https://voice-memo.example.com
+```
+
+#### 3. API Gateway
+```yaml
+API名: alexa-voice-memo-{env}-api
+タイプ: REST API
+エンドポイント:
+  - GET /memos - メモ一覧取得
+  - POST /memos - メモ追加
+  - PUT /memos/{memoId} - メモ更新
+  - DELETE /memos/{memoId} - メモ削除（論理）
+  - DELETE /memos - 全メモ削除
+  - POST /memos/{memoId}/restore - メモ復元
+  - DELETE /memos/{memoId}/permanent - 完全削除
+CORS: 有効（Web UIアクセス用）
+```
+
+#### 4. S3 バケット（Web UI）
+```yaml
+バケット名: alexa-voice-memo-{env}-web
+静的ウェブサイトホスティング: 有効
+公開アクセス: CloudFront経由のみ
+ファイル構成:
+  - index.html
+  - styles.css
+  - script.js
+  - manifest.json
+  - アイコンファイル
+```
+
+#### 5. CloudFront Distribution
+```yaml
+ディストリビューション: Web UI配信用
+オリジン: S3バケット
+カスタムドメイン: voice-memo.example.com（オプション）
+SSL証明書: CloudFront デフォルト
+キャッシュ動作: 静的コンテンツに最適化
+```
+
+#### 6. IAM ロール
+
+##### Alexa Lambda ロール
+```yaml
+ロール名: alexa-voice-memo-{env}-alexa-lambda-role
 ポリシー:
   - DynamoDB: Table読み書き権限
   - CloudWatch: ログ出力権限
   - Alexa Skills Kit: 基本権限
+```
+
+##### Web API Lambda ロール
+```yaml
+ロール名: alexa-voice-memo-{env}-web-api-lambda-role
+ポリシー:
+  - DynamoDB: Table読み書き権限（完全削除含む）
+  - CloudWatch: ログ出力権限
+  - API Gateway: 実行権限
 ```
 
 ## 📊 データ設計
@@ -75,7 +147,9 @@ export class AlexaVoiceMemoStack extends cdk.Stack {
   "memoId": "memo_20250712_001",          // ソートキー
   "text": "牛乳を買う",                    // メモ内容
   "timestamp": "2025-07-12T10:30:00.000Z", // 作成日時
-  "deleted": false,                       // 削除フラグ
+  "deleted": false,                       // 論理削除フラグ
+  "deletedAt": 1736789400,                // 削除日時（Unix timestamp、TTL用）
+  "isPermanentDeleted": false,            // 完全削除フラグ
   "createdAt": "2025-07-12T10:30:00.000Z",
   "updatedAt": "2025-07-12T10:30:00.000Z",
   "version": 1                           // 楽観的ロック用
@@ -95,11 +169,18 @@ GSI2: status-index
   - 用途: アクティブなメモのみの取得
 ```
 
+#### TTL設定
+```yaml
+属性名: deletedAt
+動作: 削除後10日経過で自動削除
+条件: deleted=true && isPermanentDeleted=false
+```
+
 ## 🔧 Lambda実装仕様
 
-### ハンドラー構成
+### Alexa Handler構成
 ```typescript
-// src/handler.ts
+// src/alexa-handler.ts
 export interface AlexaRequest {
   version: string;
   session: AlexaSession;
@@ -107,55 +188,95 @@ export interface AlexaRequest {
   request: AlexaRequestBody;
 }
 
-export interface MemoItem {
-  userId: string;
-  memoId: string;
-  text: string;
-  timestamp: string;
-  deleted: boolean;
-  createdAt: string;
-  updatedAt: string;
-  version: number;
-}
-```
-
-### API設計
-```typescript
 // Alexa Skills Kit ハンドラー
 - LaunchRequestHandler: スキル起動
 - AddMemoIntentHandler: メモ追加
-- ReadMemosIntentHandler: メモ読み上げ
+- ReadMemosIntentHandler: メモ読み上げ  
 - DeleteMemoIntentHandler: メモ削除
 - HelpIntentHandler: ヘルプ
 - CancelAndStopIntentHandler: 終了
 - ErrorHandler: エラー処理
 ```
 
-### DynamoDB操作
+### Web API Handler構成
+```typescript
+// src/web-api-handler.ts
+import express from 'express';
+import serverless from 'serverless-http';
+
+const app = express();
+
+// REST APIエンドポイント
+app.get('/memos', getMemos);           // メモ一覧取得
+app.post('/memos', createMemo);        // メモ追加
+app.put('/memos/:memoId', updateMemo); // メモ更新
+app.delete('/memos/:memoId', deleteMemo); // 論理削除
+app.delete('/memos', deleteAllMemos);  // 全削除
+app.post('/memos/:memoId/restore', restoreMemo); // 復元
+app.delete('/memos/:memoId/permanent', permanentDelete); // 完全削除
+
+export const handler = serverless(app);
+```
+
+### 共通サービス層
 ```typescript
 // src/services/memo-service.ts
 export class MemoService {
+  // 基本操作
   async addMemo(userId: string, text: string): Promise<MemoItem>
   async getActiveMemos(userId: string): Promise<MemoItem[]>
+  async getAllMemos(userId: string, includeDeleted: boolean): Promise<MemoItem[]>
+  async updateMemo(userId: string, memoId: string, text: string): Promise<MemoItem>
+  
+  // 削除操作
   async deleteMemo(userId: string, memoId: string): Promise<void>
+  async deleteAllMemos(userId: string): Promise<void>
+  async permanentDeleteMemo(userId: string, memoId: string): Promise<void>
+  async restoreMemo(userId: string, memoId: string): Promise<void>
+  
+  // ユーティリティ
   async getMemoById(userId: string, memoId: string): Promise<MemoItem | null>
+  async cleanupExpiredMemos(): Promise<void> // 10日経過した削除済みメモの自動削除
 }
+```
+
+## 🌐 Web UI仕様
+
+### ファイル構成
+```
+web/
+├── index.html          # メインHTML
+├── styles.css          # スタイルシート
+├── script.js           # JavaScriptロジック
+├── manifest.json       # PWA設定
+├── favicon.ico         # ファビコン
+└── icons/              # PWAアイコン
+    ├── icon-192.png
+    └── icon-512.png
+```
+
+### UI機能
+```yaml
+ハンバーガーメニュー:
+  - Add memo: メモ追加モーダル表示
+  - Delete all: 全メモ削除（確認付き）
+  - Permanent delete: 完全削除モード切り替え
+  - Help: ヘルプモーダル表示
+
+タッチジェスチャー:
+  - 左スワイプ: メモ削除（論理削除）
+  - 右スワイプ: 編集（通常時）/復元（削除済み時）
+  - プルトゥリフレッシュ: メモ一覧更新
+
+表示モード:
+  - 通常モード: アクティブなメモのみ表示
+  - 削除済み表示: 削除済みメモをグレーアウト表示
+  - タイムスタンプ表示: 各メモの作成/更新時刻
 ```
 
 ## 🚀 デプロイ仕様
 
-### 独立CDKプロジェクト
-
-#### alexa-voice-memo/cdk.json
-```json
-{
-  "app": "npx ts-node --project tsconfig.json bin/alexa-voice-memo.ts",
-  "context": {
-    "@aws-cdk/core:enableStackNameDuplicates": true,
-    "aws-cdk:enableDiffNoFail": true
-  }
-}
-```
+### CDKデプロイ
 
 #### bin/alexa-voice-memo.ts
 ```typescript
@@ -172,15 +293,52 @@ const region = process.env.CDK_REGION || 'ap-northeast-1';
 new AlexaVoiceMemoStack(app, `alexa-voice-memo-${environment}`, {
   env: { account, region },
   environment: environment,
+  projectName: 'alexa-voice-memo'
 });
 ```
 
-#### 環境変数
+### GitHub Actions CI/CD
+
+#### .github/workflows/deploy-web.yml
+```yaml
+name: Deploy Web UI to S3
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+      - name: Deploy to S3
+        run: |
+          aws s3 sync web/ s3://${{ secrets.S3_BUCKET_NAME }} \
+            --delete \
+            --exclude ".git/*" \
+            --exclude ".gitignore"
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/*"
+```
+
+### 環境変数
 ```bash
 # .env
 CDK_ACCOUNT=your-aws-account-id
 CDK_REGION=ap-northeast-1
 CDK_ENV=dev
+
+# GitHub Secrets
+S3_BUCKET_NAME=alexa-voice-memo-dev-web
+CLOUDFRONT_DISTRIBUTION_ID=EXXXXXXXXXXXXX
 ```
 
 ### デプロイ手順
@@ -190,13 +348,19 @@ export CDK_ACCOUNT=your-aws-account-id
 export CDK_REGION=ap-northeast-1
 export CDK_ENV=dev
 
-# 2. CDK差分確認
+# 2. 依存関係インストール
+npm install
+
+# 3. CDK差分確認
 cdk diff
 
-# 3. デプロイ実行
+# 4. インフラデプロイ
 cdk deploy alexa-voice-memo-dev
 
-# 4. 削除（必要時）
+# 5. Web UIデプロイ（GitHub Actions経由）
+git push origin main
+
+# 6. 削除（必要時）
 cdk destroy alexa-voice-memo-dev
 ```
 
@@ -206,29 +370,56 @@ cdk destroy alexa-voice-memo-dev
 ```typescript
 // test/alexa-voice-memo-stack.test.ts
 describe('AlexaVoiceMemoStack', () => {
-  test('DynamoDB table created with correct configuration');
-  test('Lambda function has proper IAM permissions');
-  test('Environment variables are set correctly');
+  test('DynamoDB table created with TTL configuration');
+  test('Both Lambda functions have proper IAM permissions');
+  test('API Gateway configured with CORS');
+  test('S3 bucket configured for static hosting');
+  test('CloudFront distribution points to S3');
 });
 ```
 
 ### 統合テスト
 ```bash
-# DynamoDB接続テスト
-# Lambda実行テスト  
+# Lambda関数テスト
+npm run test:lambda
+
+# API Gateway統合テスト
+npm run test:api
+
+# Web UI E2Eテスト  
+npm run test:e2e
+
 # Alexa Skills Kit統合テスト
+npm run test:alexa
 ```
 
 ## 🔐 セキュリティ仕様
 
 ### IAM最小権限
+
+#### Alexa Lambda権限
 ```yaml
 DynamoDB権限:
   - dynamodb:GetItem
   - dynamodb:PutItem
   - dynamodb:UpdateItem
   - dynamodb:Query
-  - dynamodb:Scan (制限付き)
+
+CloudWatch権限:
+  - logs:CreateLogGroup
+  - logs:CreateLogStream
+  - logs:PutLogEvents
+```
+
+#### Web API Lambda権限
+```yaml
+DynamoDB権限:
+  - dynamodb:GetItem
+  - dynamodb:PutItem
+  - dynamodb:UpdateItem
+  - dynamodb:DeleteItem  # 完全削除用
+  - dynamodb:Query
+  - dynamodb:BatchWriteItem  # 一括削除用
 
 CloudWatch権限:
   - logs:CreateLogGroup
@@ -240,12 +431,22 @@ CloudWatch権限:
 ```yaml
 DynamoDB:
   - 暗号化: AWS管理キー
-  - バックアップ: 継続的バックアップ有効
-  - タグ: 適切なタグ設定
+  - バックアップ: ポイントインタイムリカバリ有効
+  - TTL: 10日後の自動削除設定
 
 Lambda:
-  - VPC: パブリックサブネット（Alexa Skills Kit要件）
+  - VPC: パブリックサブネット（Alexa/API Gateway要件）
   - 環境変数: 機密情報なし
+
+S3:
+  - バケットポリシー: CloudFrontからのみアクセス許可
+  - 暗号化: AES-256
+  - バージョニング: 有効
+
+API Gateway:
+  - 認証: API Key（オプション）
+  - スロットリング: 1000リクエスト/秒
+  - CORS: 特定オリジンのみ許可
 ```
 
 ## 📋 運用仕様
@@ -255,11 +456,14 @@ Lambda:
 CloudWatch Metrics:
   - Lambda実行時間
   - Lambda エラー率
+  - API Gateway 4xx/5xx エラー
   - DynamoDB 読み書きユニット
   - DynamoDB スロットリング
+  - S3 リクエスト数
 
 CloudWatch Alarms:
   - Lambda エラー率 > 5%
+  - API Gateway エラー率 > 10%
   - DynamoDB スロットリング発生
   - 実行時間 > 25秒
 ```
@@ -271,6 +475,10 @@ Lambda Logs:
   - ログレベル: INFO以上
   - 構造化ログ: JSON形式
 
+API Gateway Logs:
+  - アクセスログ: 有効
+  - 実行ログ: エラー時のみ
+
 DynamoDB Logs:
   - アクセスログ: CloudTrail
   - パフォーマンス: CloudWatch Insights
@@ -279,7 +487,7 @@ DynamoDB Logs:
 ### バックアップ・災害復旧
 ```yaml
 DynamoDB:
-  - 継続的バックアップ: 35日間
+  - ポイントインタイムリカバリ: 35日間
   - オンデマンドバックアップ: 週次
   - 復旧時間目標: 4時間
 
@@ -287,6 +495,11 @@ Lambda:
   - コード: Git管理
   - 設定: CDKコード管理
   - 復旧時間目標: 30分
+
+S3:
+  - バージョニング: 有効
+  - レプリケーション: 別リージョン（オプション）
+  - 復旧時間目標: 1時間
 ```
 
 ## 🎯 パフォーマンス仕様
@@ -297,58 +510,75 @@ Alexa応答時間:
   - 目標: 3秒以内
   - 最大: 8秒（Alexa制限）
 
+Web API応答時間:
+  - 一覧取得: 500ms以内
+  - 個別操作: 200ms以内
+  - 一括削除: 1秒以内
+
 DynamoDB性能:
-  - 読み込み: 1ms以内
-  - 書き込み: 5ms以内
-  - スループット: オンデマンド
+  - 読み込み: 10ms以内
+  - 書き込み: 20ms以内
+  - TTL削除: 48時間以内（AWS仕様）
 ```
 
 ### スケーラビリティ
 ```yaml
 同時実行:
-  - Lambda: 100同時実行まで
+  - Alexa Lambda: 100同時実行まで
+  - Web API Lambda: 500同時実行まで
   - DynamoDB: オンデマンドで自動調整
 
 ユーザー数:
-  - 想定: 1-10ユーザー（個人利用）
-  - 最大: 1000ユーザーまで対応可能
+  - 想定: 1-100ユーザー
+  - 最大: 10,000ユーザーまで対応可能
 ```
 
 ## 💰 コスト仕様
 
-### 想定コスト（月額・dev環境）
+### 想定コスト（月額・100ユーザー想定）
 ```yaml
 DynamoDB:
-  - オンデマンド: ~$0.01
-  - ストレージ: ~$0.01
+  - オンデマンド: ~$1.00
+  - ストレージ: ~$0.25
+  - TTL削除: 無料
 
 Lambda:
-  - 実行時間: ~$0.01
-  - リクエスト: ~$0.01
+  - Alexa Handler: ~$0.50
+  - Web API: ~$1.00
+  - リクエスト: ~$0.20
+
+API Gateway:
+  - REST API: ~$3.50/million requests
+
+S3 + CloudFront:
+  - ストレージ: ~$0.02
+  - 転送量: ~$0.50
 
 CloudWatch:
-  - ログ: ~$0.05
-  - メトリクス: ~$0.01
+  - ログ: ~$0.50
+  - メトリクス: ~$0.30
 
-合計: ~$0.10/月
+合計: ~$8.00/月（100ユーザー）
 ```
 
 ### コスト最適化
 ```yaml
 開発環境:
   - DynamoDB: オンデマンド
-  - Lambda: 最小リソース
+  - Lambda: 最小メモリ
   - ログ保持: 短期間
+  - CloudFront: 開発用設定
 
 本番環境:
-  - DynamoDB: プロビジョンド（必要に応じて）
-  - Lambda: 適切なサイジング
-  - モニタリング強化
+  - DynamoDB: 使用量に応じてプロビジョンド検討
+  - Lambda: 適切なメモリサイジング
+  - ログ: 必要最小限
+  - CloudFront: キャッシュ最適化
 ```
 
 ## 📁 ディレクトリ構成
 
-### alexa-voice-memo リポジトリ（独立）
+### alexa-voice-memo リポジトリ
 ```
 alexa-voice-memo/
 ├── bin/
@@ -356,13 +586,25 @@ alexa-voice-memo/
 ├── lib/
 │   └── alexa-voice-memo-stack.ts     # CDKスタック定義
 ├── src/
-│   ├── handler.ts                    # Lambdaハンドラー
+│   ├── alexa-handler.ts              # Alexa Lambda ハンドラー
+│   ├── web-api-handler.ts            # Web API Lambda ハンドラー
 │   ├── services/
 │   │   └── memo-service.ts           # DynamoDB操作
 │   └── types/
-│       └── alexa-types.ts            # 型定義
+│       ├── alexa-types.ts            # Alexa型定義
+│       └── api-types.ts              # API型定義
+├── web/
+│   ├── index.html                    # Web UI
+│   ├── styles.css
+│   ├── script.js
+│   └── manifest.json
 ├── test/
+│   ├── alexa-handler.test.ts
+│   ├── web-api-handler.test.ts
 │   └── alexa-voice-memo-stack.test.ts
+├── .github/
+│   └── workflows/
+│       └── deploy-web.yml            # CI/CD設定
 ├── cdk.json                          # CDK設定
 ├── package.json
 ├── tsconfig.json
@@ -371,36 +613,50 @@ alexa-voice-memo/
 
 ## 🔄 開発フロー
 
-### 1. インフラ先行開発
+### 1. インフラ開発
 ```bash
-# 1. CDKスタック実装
-# 2. インフラデプロイ
-# 3. 接続テスト
+# 1. CDKスタック実装（2つのLambda、API Gateway、S3、CloudFront）
+# 2. DynamoDB TTL設定
+# 3. IAMロール設定
+# 4. インフラデプロイ
 ```
 
-### 2. アプリケーション開発
+### 2. バックエンド開発
 ```bash
-# 1. 別リポジトリでLambda実装
-# 2. ローカルテスト
-# 3. デプロイ・統合テスト
+# 1. 共通MemoService実装
+# 2. Alexa Handler実装
+# 3. Web API Handler実装（Express.js）
+# 4. 論理削除・自動削除機能実装
 ```
 
-### 3. 継続的改善
+### 3. フロントエンド開発
 ```bash
-# 1. モニタリング確認
-# 2. パフォーマンス調整
-# 3. 機能拡張
+# 1. Web UI実装（HTML/CSS/JS）
+# 2. タッチジェスチャー実装
+# 3. PWA対応
+# 4. GitHub Actions CI/CD設定
+```
+
+### 4. 統合・テスト
+```bash
+# 1. エンドツーエンドテスト
+# 2. Alexa実機テスト
+# 3. パフォーマンス調整
+# 4. 本番環境デプロイ
 ```
 
 ---
 
-## ✅ 次のアクション
+## ✅ 実装済み機能
 
-1. **CDKスタック実装**: AlexaVoiceMemoStack作成
-2. **web3cdk統合**: bin/web3cdk.tsに追加
-3. **デプロイテスト**: dev環境での動作確認
-4. **アプリリポジトリ作成**: alexa-voice-memo独立開発開始
+1. **インフラ**: 全リソースCDKで管理
+2. **2つのLambda**: Alexa用とWeb API用を分離
+3. **Web UI**: S3ホスティング + CloudFront配信
+4. **API Gateway**: REST API with CORS
+5. **論理削除**: 10日後の自動削除機能
+6. **タッチ操作**: スワイプジェスチャー対応
+7. **CI/CD**: GitHub Actionsによる自動デプロイ
 
 ---
 
-*この仕様書に基づいて、まずCDKスタック実装から開始しましょう*
+*この仕様書は現在の実装を反映しています - 2025-07-13更新*
