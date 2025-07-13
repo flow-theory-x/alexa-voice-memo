@@ -228,6 +228,12 @@ header h1 {
   line-height: 1.6;
 }
 
+.help-note {
+  font-size: 14px;
+  color: #9ca3af;
+  margin-top: 10px;
+}
+
 .close-btn {
   background-color: #0e2246;
   color: white;
