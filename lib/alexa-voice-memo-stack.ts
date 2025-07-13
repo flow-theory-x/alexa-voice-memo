@@ -50,6 +50,25 @@ export class AlexaVoiceMemoStack extends cdk.Stack {
       sortKey: { name: 'deleted', type: dynamodb.AttributeType.STRING },
     });
 
+    // Global Secondary Index for family-based queries
+    this.memoTable.addGlobalSecondaryIndex({
+      indexName: 'family-timestamp-index',
+      partitionKey: { name: 'familyId', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'timestamp', type: dynamodb.AttributeType.STRING },
+    });
+
+    // DynamoDB Table for Invite Codes
+    const inviteCodeTable = new dynamodb.Table(this, 'InviteCodesTable', {
+      tableName: `${projectName}-${environment}-invite-codes`,
+      partitionKey: { name: 'code', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      encryption: dynamodb.TableEncryption.AWS_MANAGED,
+      timeToLiveAttribute: 'ttl', // 自動削除用
+      removalPolicy: environment === 'prod' 
+        ? cdk.RemovalPolicy.RETAIN 
+        : cdk.RemovalPolicy.DESTROY,
+    });
+
     // IAM Role for Lambda
     this.alexaRole = new iam.Role(this, 'LambdaRole', {
       roleName: `${projectName}-${environment}-lambda-role`,
@@ -114,11 +133,13 @@ export class AlexaVoiceMemoStack extends cdk.Stack {
       memorySize: 256,
       environment: {
         MEMO_TABLE_NAME: this.memoTable.tableName,
+        INVITE_CODE_TABLE_NAME: inviteCodeTable.tableName,
       },
     });
 
     // Grant Web API Lambda permissions to access DynamoDB
     this.memoTable.grantReadWriteData(webApiHandler);
+    inviteCodeTable.grantReadWriteData(webApiHandler);
 
     // API Gateway for Web UI
     const webApi = new apigateway.RestApi(this, 'WebApi', {
@@ -148,10 +169,39 @@ export class AlexaVoiceMemoStack extends cdk.Stack {
     const restoreResource = memoIdResource.addResource('restore');
     restoreResource.addMethod('PUT', new apigateway.LambdaIntegration(webApiHandler));
     
+    // Family management endpoints
+    const apiResource = webApi.root.getResource('api')!;
+    const familyResource = apiResource.addResource('family');
+    
+    // POST /api/family/invite-codes - 招待コード生成
+    const inviteCodesResource = familyResource.addResource('invite-codes');
+    inviteCodesResource.addMethod('POST', new apigateway.LambdaIntegration(webApiHandler));
+    
+    // POST /api/family/join - 家族に参加
+    const joinResource = familyResource.addResource('join');
+    joinResource.addMethod('POST', new apigateway.LambdaIntegration(webApiHandler));
+    
+    // POST /api/family/leave - 家族から退出
+    const leaveResource = familyResource.addResource('leave');
+    leaveResource.addMethod('POST', new apigateway.LambdaIntegration(webApiHandler));
+    
+    // POST /api/family/transfer-owner - 筆頭者移譲
+    const transferOwnerResource = familyResource.addResource('transfer-owner');
+    transferOwnerResource.addMethod('POST', new apigateway.LambdaIntegration(webApiHandler));
+    
+    // GET /api/family/members - メンバー一覧
+    const membersResource = familyResource.addResource('members');
+    membersResource.addMethod('GET', new apigateway.LambdaIntegration(webApiHandler));
+    
     // OPTIONS for CORS
     memosResource.addMethod('OPTIONS', new apigateway.LambdaIntegration(webApiHandler));
     memoIdResource.addMethod('OPTIONS', new apigateway.LambdaIntegration(webApiHandler));
     restoreResource.addMethod('OPTIONS', new apigateway.LambdaIntegration(webApiHandler));
+    inviteCodesResource.addMethod('OPTIONS', new apigateway.LambdaIntegration(webApiHandler));
+    joinResource.addMethod('OPTIONS', new apigateway.LambdaIntegration(webApiHandler));
+    leaveResource.addMethod('OPTIONS', new apigateway.LambdaIntegration(webApiHandler));
+    transferOwnerResource.addMethod('OPTIONS', new apigateway.LambdaIntegration(webApiHandler));
+    membersResource.addMethod('OPTIONS', new apigateway.LambdaIntegration(webApiHandler));
 
     // Output the API endpoint
     new cdk.CfnOutput(this, 'WebApiUrl', {

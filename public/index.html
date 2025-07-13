@@ -10,11 +10,16 @@
     <div class="container">
       <header>
         <h1>voiceMEMO</h1>
-        <button id="menu-btn" class="menu-btn">
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
+        <div class="header-right">
+          <div id="family-info" class="family-info">
+            <span id="family-members-count">👤 1</span>
+          </div>
+          <button id="menu-btn" class="menu-btn">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+        </div>
       </header>
 
       <!-- ハンバーガーメニュー -->
@@ -24,6 +29,12 @@
           <li><button id="add-memo-btn" class="menu-item">メモ追加</button></li>
           <li><button id="delete-all-btn" class="menu-item">全件削除</button></li>
           <li><button id="permanent-delete-btn" class="menu-item">完全削除</button></li>
+          <li class="menu-separator"></li>
+          <li><button id="invite-family-btn" class="menu-item">👨‍👩‍👧‍👦 家族を招待</button></li>
+          <li><button id="join-family-btn" class="menu-item">🔢 招待コードで参加</button></li>
+          <li><button id="leave-family-btn" class="menu-item">🚪 家族から退出</button></li>
+          <li><button id="family-members-btn" class="menu-item">👥 メンバー一覧</button></li>
+          <li class="menu-separator"></li>
           <li><button id="help-btn" class="menu-item">ヘルプ</button></li>
         </ul>
       </div>
@@ -69,6 +80,41 @@
           </div>
           <p class="voice-status">話してください...</p>
           <button id="voice-cancel-btn" class="voice-cancel-btn">キャンセル</button>
+        </div>
+      </div>
+
+      <!-- 招待コードモーダル -->
+      <div id="invite-modal" class="modal">
+        <div class="modal-content">
+          <h2>家族を招待</h2>
+          <div class="invite-code-display">
+            <span id="invite-code" class="invite-code">----</span>
+          </div>
+          <p class="invite-info">この4桁のコードを家族に共有してください<br>有効期限: 5分間</p>
+          <button id="close-invite-btn" class="close-btn">閉じる</button>
+        </div>
+      </div>
+
+      <!-- 参加コード入力モーダル -->
+      <div id="join-modal" class="modal">
+        <div class="modal-content">
+          <h2>家族に参加</h2>
+          <input type="text" id="join-code-input" class="join-code-input" placeholder="4桁の招待コード" maxlength="4" pattern="[0-9]{4}">
+          <div class="modal-buttons">
+            <button id="join-submit-btn" class="primary-btn">参加</button>
+            <button id="cancel-join-btn" class="secondary-btn">キャンセル</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- メンバー一覧モーダル -->
+      <div id="members-modal" class="modal">
+        <div class="modal-content">
+          <h2>家族メンバー</h2>
+          <div id="members-list" class="members-list">
+            <!-- メンバーリストがここに表示されます -->
+          </div>
+          <button id="close-members-btn" class="close-btn">閉じる</button>
         </div>
       </div>
 

@@ -1,5 +1,5 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand, QueryCommand, UpdateCommand, BatchWriteCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, PutCommand, QueryCommand, UpdateCommand, BatchWriteCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { MemoItem } from './types';
 
 export class MemoService {
@@ -12,7 +12,22 @@ export class MemoService {
     this.tableName = process.env.MEMO_TABLE_NAME!;
   }
 
-  async addMemo(userId: string, text: string): Promise<MemoItem> {
+  // ユーザーのfamilyIdを取得
+  private async getFamilyId(userId: string): Promise<string> {
+    const command = new ScanCommand({
+      TableName: this.tableName,
+      FilterExpression: 'userId = :userId AND userId = memoId',
+      ExpressionAttributeValues: {
+        ':userId': userId
+      },
+      Limit: 1
+    });
+
+    const result = await this.docClient.send(command);
+    return result.Items?.[0]?.familyId || userId;
+  }
+
+  async addMemo(userId: string, text: string, userName: string = 'Alexa'): Promise<MemoItem> {
     if (!text || text.trim().length === 0) {
       throw new Error('Memo text cannot be empty');
     }
@@ -21,6 +36,7 @@ export class MemoService {
       throw new Error('Memo text too long');
     }
 
+    const familyId = await this.getFamilyId(userId);
     const now = new Date().toISOString();
     const memoId = `memo_${now.slice(0, 10).replace(/-/g, '')}_${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
     
@@ -32,7 +48,9 @@ export class MemoService {
       deleted: 'false',
       createdAt: now,
       updatedAt: now,
-      version: 1
+      version: 1,
+      familyId,
+      createdByName: userName
     };
 
     await this.docClient.send(new PutCommand({
@@ -44,12 +62,15 @@ export class MemoService {
   }
 
   async getActiveMemos(userId: string): Promise<MemoItem[]> {
+    const familyId = await this.getFamilyId(userId);
+    
     const command = new QueryCommand({
       TableName: this.tableName,
-      KeyConditionExpression: 'userId = :userId',
+      IndexName: 'family-timestamp-index',
+      KeyConditionExpression: 'familyId = :familyId',
       FilterExpression: 'deleted = :deleted',
       ExpressionAttributeValues: {
-        ':userId': userId,
+        ':familyId': familyId,
         ':deleted': 'false'
       },
       ScanIndexForward: false, // Latest first
