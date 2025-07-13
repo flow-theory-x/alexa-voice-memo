@@ -150,9 +150,7 @@ SSL証明書: CloudFront デフォルト
   "deleted": false,                       // 論理削除フラグ
   "deletedAt": 1736789400,                // 削除日時（Unix timestamp、TTL用）
   "isPermanentDeleted": false,            // 完全削除フラグ
-  "createdAt": "2025-07-12T10:30:00.000Z",
-  "updatedAt": "2025-07-12T10:30:00.000Z",
-  "version": 1                           // 楽観的ロック用
+  "updatedAt": "2025-07-12T10:30:00.000Z"
 }
 ```
 

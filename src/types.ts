@@ -10,7 +10,10 @@ export interface AlexaSession {
   new: boolean;
   sessionId: string;
   application: { applicationId: string };
-  user: { userId: string };
+  user: { 
+    userId: string;
+    accessToken?: string; // Google OAuth token from Account Linking
+  };
   attributes?: { [key: string]: any };
 }
 
@@ -57,6 +60,16 @@ export interface AlexaResponse {
         text: string;
       };
     };
+    card?: {
+      type: 'LinkAccount' | 'Simple' | 'Standard';
+      title?: string;
+      content?: string;
+      text?: string;
+      image?: {
+        smallImageUrl?: string;
+        largeImageUrl?: string;
+      };
+    };
   };
   sessionAttributes?: { [key: string]: any };
 }
@@ -68,7 +81,8 @@ export interface MemoItem {
   text: string;
   timestamp: string;
   deleted: string;
-  createdAt: string;
   updatedAt: string;
-  version: number;
+  familyId?: string;
+  completedAt?: string;
+  completedBy?: string;
 }

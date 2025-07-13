@@ -147,12 +147,18 @@ vite.config.ts.timestamp-*
 !public/*.html
 !public/*.css
 
+# Exceptions for scripts directory
+!scripts/*.js
+
 # CDK specific
 cdk.out/
 
 # Test output files  
 test/responses/
 test/fixtures/
+
+# Frontend build output
+build/
 
 # AWS specific
 .aws/

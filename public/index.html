@@ -5,27 +5,90 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>voiceMEMO</title>
     <link rel="stylesheet" href="style.css" />
+    <!-- Google Sign-In -->
+    <script
+      src="https://accounts.google.com/gsi/client"
+      onload="window.googleSignInReady = true"
+      async
+      defer
+    ></script>
   </head>
   <body>
     <div class="container">
       <header>
         <h1>voiceMEMO</h1>
-        <button id="menu-btn" class="menu-btn">
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
+        <div class="header-right">
+          <div id="family-info" class="family-info">
+            <span id="family-members-count">👤 1</span>
+          </div>
+          <button id="menu-btn" class="menu-btn">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+        </div>
       </header>
 
       <!-- ハンバーガーメニュー -->
       <div id="menu-overlay" class="menu-overlay"></div>
       <div id="menu-panel" class="menu-panel">
+        <!-- ユーザー情報 -->
+        <div id="user-info" class="user-info">
+          <div class="user-avatar">
+            <img
+              id="user-avatar-img"
+              src=""
+              alt="ユーザーアバター"
+              style="display: none"
+            />
+            <div id="user-avatar-fallback" class="user-avatar-fallback">👤</div>
+          </div>
+          <div class="user-details">
+            <div id="user-name" class="user-name">ユーザー</div>
+            <div id="user-email" class="user-email">user@example.com</div>
+          </div>
+        </div>
+        <div class="menu-separator"></div>
+
         <ul class="menu-list">
           <li><button id="add-memo-btn" class="menu-item">メモ追加</button></li>
-          <li><button id="delete-all-btn" class="menu-item">全件削除</button></li>
-          <li><button id="permanent-delete-btn" class="menu-item">完全削除</button></li>
+          <li>
+            <button id="delete-all-btn" class="menu-item">全件削除</button>
+          </li>
+          <li>
+            <button id="permanent-delete-btn" class="menu-item">
+              完全削除
+            </button>
+          </li>
+          <li class="menu-separator"></li>
+          <li>
+            <button id="family-members-btn" class="menu-item">家族名簿</button>
+          </li>
+          <li>
+            <button id="invite-family-btn" class="menu-item">家族に招待</button>
+          </li>
+          <li>
+            <button id="join-family-btn" class="menu-item">招待を受ける</button>
+          </li>
+          <li>
+            <button id="leave-family-btn" class="menu-item">独立する</button>
+          </li>
+          <li class="menu-separator"></li>
+          <li>
+            <button id="change-name-btn" class="menu-item">名前を変更</button>
+          </li>
           <li><button id="help-btn" class="menu-item">ヘルプ</button></li>
+          <li class="menu-separator"></li>
+          <li>
+            <button id="logout-btn" class="menu-item">ログアウト</button>
+          </li>
         </ul>
+
+        <!-- バージョン情報 -->
+        <div class="menu-separator"></div>
+        <div id="version-info" class="version-info">
+          <span id="version-text">v1.0.0</span>
+        </div>
       </div>
 
       <!-- ヘルプモーダル -->
@@ -35,25 +98,32 @@
           <div class="help-section">
             <h3>基本操作</h3>
             <ul>
-              <li>🎤 マイクボタン: 音声入力</li>
-              <li>下に引っ張る: リフレッシュ</li>
-              <li>左スワイプ: 削除（削除済みは完全削除）</li>
-              <li>右スワイプ: 編集（削除済みは復元）</li>
+              <li>マイクボタン: 音声入力</li>
+              <li>下スワイプ: リロード</li>
+              <li>左スワイプ: 削除</li>
+              <li>右スワイプ: 編集</li>
+              <li>ダブルタップ: 内容表示</li>
             </ul>
           </div>
           <div class="help-section">
             <h3>音声入力の設定</h3>
             <p>マイクが使えない場合：</p>
             <ul>
-              <li><strong>iPhone/iPad</strong>: 設定 → Chrome/Safari → マイクをON</li>
+              <li>
+                <strong>iPhone/iPad</strong>: 設定 → Chrome/Safari → マイクをON
+              </li>
               <li><strong>Android</strong>: サイト設定 → マイクを許可</li>
               <li><strong>PC</strong>: ブラウザの許可ダイアログで「許可」</li>
             </ul>
-            <p class="help-note">※音声入力はChrome、Edge、Safari（iOS 14.5+）で利用可能</p>
+            <p class="help-note">
+              ※音声入力はChrome、Edge、Safari（iOS 14.5+）で利用可能
+            </p>
           </div>
           <div class="help-section">
             <h3>Alexaアプリ</h3>
-            <p>「アレクサ、ボイスメモで〇〇をメモして」と話しかけるだけで、音声でメモを追加できます。</p>
+            <p>
+              「アレクサ、voiceMEMOで〇〇を記録」と話しかけるだけで、音声でメモを追加できます。
+            </p>
           </div>
           <button id="close-help-btn" class="close-btn">閉じる</button>
         </div>
@@ -68,7 +138,66 @@
             <div class="voice-wave"></div>
           </div>
           <p class="voice-status">話してください...</p>
-          <button id="voice-cancel-btn" class="voice-cancel-btn">キャンセル</button>
+          <button id="voice-cancel-btn" class="voice-cancel-btn">
+            キャンセル
+          </button>
+        </div>
+      </div>
+
+      <!-- 招待コードモーダル -->
+      <div id="invite-modal" class="modal">
+        <div class="modal-content">
+          <h2>家族に招待</h2>
+          <div class="invite-code-display">
+            <span id="invite-code" class="invite-code">----</span>
+          </div>
+          <p class="invite-info">
+            この4桁のコードを家族に共有してください<br />有効期限: 5分間
+          </p>
+
+          <div class="alexa-invite-section">
+            <h3>📢 Alexaを招待する場合</h3>
+            <div class="alexa-steps">
+              <p>
+                「アレクサ、voiceMEMOで招待
+                <span id="alexa-code" class="alexa-code">----</span>」と話す
+              </p>
+            </div>
+          </div>
+
+          <button id="close-invite-btn" class="close-btn">閉じる</button>
+        </div>
+      </div>
+
+      <!-- 参加コード入力モーダル -->
+      <div id="join-modal" class="modal">
+        <div class="modal-content">
+          <h2>招待を受ける</h2>
+          <input
+            type="text"
+            id="join-code-input"
+            class="join-code-input"
+            placeholder="4桁の招待コード"
+            maxlength="4"
+            pattern="[0-9]{4}"
+          />
+          <div class="modal-buttons">
+            <button id="join-submit-btn" class="primary-btn">参加</button>
+            <button id="cancel-join-btn" class="secondary-btn">
+              キャンセル
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- メンバー一覧モーダル -->
+      <div id="members-modal" class="modal">
+        <div class="modal-content">
+          <h2>家族名簿</h2>
+          <div id="members-list" class="members-list">
+            <!-- メンバーリストがここに表示されます -->
+          </div>
+          <button id="close-members-btn" class="close-btn">閉じる</button>
         </div>
       </div>
 
@@ -77,6 +206,15 @@
       </div>
 
       <main>
+        <!-- ログイン画面 -->
+        <div id="login-screen" class="login-screen">
+          <div class="login-content">
+            <h2>Voice Memo</h2>
+            <p>家族で共有できるボイスメモ</p>
+            <div id="googleSignInButton"></div>
+          </div>
+        </div>
+
         <div id="memo-list" class="memo-list">
           <!-- メモがここに表示されます -->
         </div>
@@ -102,7 +240,14 @@
 
     <!-- フローティングマイクボタン -->
     <button id="voice-btn" class="voice-btn" aria-label="音声入力">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <svg
+        width="28"
+        height="28"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
         <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
         <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
         <line x1="12" y1="19" x2="12" y2="23"></line>

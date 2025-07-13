@@ -7,14 +7,16 @@ echo "Building Web API Lambda..."
 rm -rf dist/web-api
 mkdir -p dist/web-api
 
-# Copy handler
+# Copy handler and dependencies
 cp lib/alexa-voice-memo-stack.WebApiHandler.ts dist/web-api/index.ts
+cp lib/alexa-voice-memo-stack.UserService.ts dist/web-api/
 
 # Compile TypeScript
-npx tsc dist/web-api/index.ts --outDir dist/web-api --lib es2020 --target es2020 --module commonjs --esModuleInterop
+npx tsc dist/web-api/index.ts dist/web-api/alexa-voice-memo-stack.UserService.ts --outDir dist/web-api --lib es2020 --target es2020 --module commonjs --esModuleInterop
 
-# Remove TypeScript file
+# Remove TypeScript files
 rm dist/web-api/index.ts
+rm dist/web-api/alexa-voice-memo-stack.UserService.ts
 
 # Copy package.json for dependencies
 cat > dist/web-api/package.json << EOF

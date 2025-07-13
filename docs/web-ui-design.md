@@ -37,9 +37,7 @@ interface MemoItem {
   text: string;
   timestamp: string;
   deleted: string;     // "true" or "false"
-  createdAt: string;
   updatedAt: string;
-  version: number;
 }
 ```
 

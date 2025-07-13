@@ -81,9 +81,7 @@ describe('MemoService', () => {
         text,
         timestamp: expect.any(String),
         deleted: false,
-        createdAt: expect.any(String),
-        updatedAt: expect.any(String),
-        version: 1
+        updatedAt: expect.any(String)
       });
       
       expect(mockDynamoDB.send).toHaveBeenCalledWith(

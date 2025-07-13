@@ -38,6 +38,20 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ap-northeast-1
 
+    - name: Build Frontend
+      run: |
+        # Set environment based on branch
+        if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+          export CDK_ENV=prod
+          export GOOGLE_CLIENT_ID_PROD=${{ secrets.GOOGLE_CLIENT_ID_PROD }}
+        else
+          export CDK_ENV=dev
+          export GOOGLE_CLIENT_ID_DEV=${{ secrets.GOOGLE_CLIENT_ID_DEV }}
+        fi
+        
+        # Build frontend with environment
+        npm run build:frontend -- --env=$CDK_ENV
+
     - name: Deploy to AWS
       run: |
         # Set environment based on branch
@@ -47,7 +61,7 @@ jobs:
           export CDK_ENV=dev
         fi
         
-        # Deploy CDK stack
+        # Deploy CDK stack (this will also deploy the frontend from build/frontend)
         npx cdk deploy --require-approval never
         
     - name: Deploy complete

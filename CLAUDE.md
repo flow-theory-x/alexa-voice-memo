@@ -16,6 +16,7 @@
 - **段階的改善**: MVP→機能拡張の段階的開発
 - **学習重視**: 技術習得と検証を主目的
 - **実用性優先**: 完璧より動くものを早く
+- **仕様書を軽視しない**: ideanotesの仕様書は実行可能な設計書
 
 ## 📋 開発指針
 
@@ -59,9 +60,14 @@
 
 ### Required Environment Variables
 ```bash
+# AWS Configuration (export方式)
 export CDK_ACCOUNT=your-aws-account-id
 export CDK_REGION=ap-northeast-1
 export CDK_ENV=dev
+
+# Google Client ID Configuration (.env方式)
+# 環境別設定ファイル: .env.dev, .env.stg, .env.prod で管理
+# 詳細は .env.example を参照
 ```
 
 ### Project Structure
@@ -89,6 +95,11 @@ alexa-voice-memo/
 npm run build                   # Compile TypeScript
 npm run watch                   # Watch mode
 npm test                        # Run tests
+
+# Frontend build (environment-specific)
+npm run build:frontend:dev      # Build for development
+npm run build:frontend:stg      # Build for staging
+npm run build:frontend:prod     # Build for production
 
 # CDK operations  
 cdk diff                        # Show changes

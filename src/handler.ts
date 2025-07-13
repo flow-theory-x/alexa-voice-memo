@@ -50,6 +50,9 @@ async function handleIntent(
 
     case "DeleteAllMemosIntent":
       return await handleDeleteAllMemos(event, userId);
+      
+    case "JoinFamilyIntent":
+      return await handleJoinFamily(event, userId);
 
     case "AMAZON.YesIntent":
       return await handleYesIntent(event, userId);
@@ -59,7 +62,7 @@ async function handleIntent(
 
     case "AMAZON.HelpIntent":
       return buildResponse(
-        "ボイスメモでは、メモの追加、読み上げ、削除ができます。例えば「牛乳を買うをメモに追加」や「メモを読んで」と言ってください。",
+        "ボイスメモでは、メモの追加、読み上げ、削除ができます。例えば「牛乳を買うをメモに追加」や「メモを読んで」と言ってください。家族と共有するには「招待コード〇〇で参加」と言ってください。",
         false
       );
 
@@ -83,7 +86,8 @@ async function handleAddMemo(
       return buildResponse("聞き取れませんでした。もう一度お願いします", false);
     }
 
-    await memoService.addMemo(userId, memoText);
+    // Add memo with familyId
+    await memoService.addMemo(userId, memoText, "Alexa");
     return buildResponse(`${memoText}をメモに追加しました。`, false);
   } catch (error) {
     console.error("Add memo error:", error);
@@ -209,11 +213,37 @@ async function handleDeleteMemo(
   }
 }
 
+async function handleJoinFamily(
+  event: AlexaRequest,
+  userId: string
+): Promise<AlexaResponse> {
+  try {
+    const inviteCode = event.request.intent?.slots?.inviteCode?.value;
+
+    if (!inviteCode) {
+      return buildResponse("招待コードが聞き取れませんでした。もう一度お願いします。", false);
+    }
+
+    // Join family using invite code
+    const result = await memoService.joinFamilyByInviteCode(userId, inviteCode, "Alexa");
+    
+    if (result.success) {
+      return buildResponse("家族に参加しました。これからはメモを共有できます。", false);
+    } else {
+      return buildResponse("無効な招待コードです。正しいコードを確認してください。", false);
+    }
+  } catch (error) {
+    console.error("Join family error:", error);
+    return buildResponse("家族への参加に失敗しました。", false);
+  }
+}
+
 function buildResponse(
   outputText: string,
   shouldEndSession: boolean = false,
   sessionAttributes: any = {},
-  clearSession: boolean = false
+  clearSession: boolean = false,
+  linkAccountCard: boolean = false
 ): AlexaResponse {
   const response: AlexaResponse = {
     version: "1.0",
@@ -228,6 +258,13 @@ function buildResponse(
 
   if (!clearSession && Object.keys(sessionAttributes).length > 0) {
     response.sessionAttributes = sessionAttributes;
+  }
+
+  // Add LinkAccount card if needed
+  if (linkAccountCard) {
+    response.response.card = {
+      type: "LinkAccount"
+    };
   }
 
   return response;

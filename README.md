@@ -4,14 +4,27 @@
 
 ## 🎯 プロジェクト概要
 
-**開発ステータス**: Phase 1 完了 ✅  
+**開発ステータス**: 全機能実装完了 ✅  
 **稼働状況**: AWS本番環境で動作中  
-**実装期間**: 17分（2025-07-12）  
+**実装期間**: 初期実装17分（2025-07-12）+ Web UI・家族機能（2025-07-13〜14）
 
 ### 主要機能
+
+#### Alexaスキル
 - ✅ **メモ追加**: 「牛乳を買うをメモして」
 - ✅ **メモ読み上げ**: 「メモを読んで」
-- ✅ **メモ削除**: 「1番目のメモを削除して」（実装済み）
+- ✅ **メモ削除**: 「1番目のメモを削除して」
+
+#### Web UI
+- ✅ **Google Sign-In認証**: Googleアカウントでログイン
+- ✅ **メモ管理**: 追加・編集・削除・復元
+- ✅ **音声入力**: Web Speech APIによる音声メモ追加
+- ✅ **家族共有機能**: 
+  - 招待コード（4桁）で家族を招待
+  - 家族間でメモを共有
+  - 当主（とうしゅ）による家族管理
+  - 家督譲渡（かとくじょうと）機能
+  - メモの自動統合・分離
 
 ### 技術スタック
 - **インフラ**: AWS CDK v2 (TypeScript)
@@ -32,16 +45,68 @@ export CDK_ENV=dev
 npm install
 ```
 
-### 2. デプロイ
-```bash
-# ビルド
-npm run build
+### 2. Google Sign-In 設定（Web UI用）
 
-# デプロイ
-cdk deploy alexa-voice-memo-dev
+#### 2.1 Google Cloud Console での設定
+1. [Google Cloud Console](https://console.cloud.google.com/) にアクセス
+2. 新規プロジェクトを作成（または既存プロジェクトを選択）
+3. **OAuth同意画面** の設定
+   - **APIとサービス** → **OAuth同意画面** を開く
+   - ユーザータイプ: **外部** を選択
+   - アプリ情報を入力:
+     - アプリ名: `Voice Memo`
+     - ユーザーサポートメール: あなたのメールアドレス
+     - 開発者連絡先情報: あなたのメールアドレス
+   - スコープは追加不要（基本プロフィールのみ使用）
+   - テストユーザーを追加（必要に応じて）
+4. **認証情報** → **認証情報を作成** → **OAuth クライアント ID**
+5. 以下の設定を行う：
+   - アプリケーションの種類: **ウェブアプリケーション**
+   - 名前: `Voice Memo Web`
+   - 承認済みの JavaScript 生成元:
+     - `http://localhost:8080` （開発用）
+     - `http://alexa-voice-memo-dev-frontend.s3-website-ap-northeast-1.amazonaws.com` （S3開発環境）
+     - `https://your-domain.com` （本番用）
+6. **作成** をクリックしてクライアントIDを取得
+
+#### 2.2 アプリケーションへの設定
+```bash
+# 環境別設定ファイルの作成
+cp .env.example .env.dev
+
+# 開発環境のGoogle Client IDを設定
+# .env.dev ファイルを編集:
+GOOGLE_CLIENT_ID_DEV=123456789012-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com
+CDK_ACCOUNT=your-aws-account-id
+CDK_REGION=ap-northeast-1
+CDK_ENV=dev
+
+# 本番環境用の場合
+cp .env.example .env.prod
+# .env.prod に本番用のClient IDを設定
 ```
 
-### 3. テスト実行
+### 3. デプロイ
+```bash
+# 依存関係インストール
+npm install
+
+# バックエンドビルド
+npm run build
+
+# CDKデプロイ（バックエンド）
+cdk deploy alexa-voice-memo-dev
+
+# フロントエンドビルド（環境別）
+npm run build:frontend:dev   # 開発環境
+npm run build:frontend:stg   # ステージング環境  
+npm run build:frontend:prod  # 本番環境
+
+# フロントエンドデプロイ（S3）
+npm run deploy:frontend
+```
+
+### 4. テスト実行
 ```bash
 # Lambda関数テスト
 aws lambda invoke --function-name alexa-voice-memo-dev-handler \
@@ -54,18 +119,29 @@ aws lambda invoke --function-name alexa-voice-memo-dev-handler \
 ```
 alexa-voice-memo/
 ├── src/                    # Lambda ソースコード
-│   ├── handler.ts         # メインハンドラー
+│   ├── handler.ts         # Alexaスキルハンドラー
 │   ├── memo-service.ts    # DynamoDB操作
 │   └── types.ts           # 型定義
 ├── lib/                    # CDK インフラ定義
-│   └── alexa-voice-memo-stack.ts
+│   ├── alexa-voice-memo-stack.ts
+│   └── alexa-voice-memo-stack.WebApiHandler.ts # Web API
+├── public/                 # Web UI
+│   ├── index.html
+│   ├── styles.css
+│   └── app.js
+├── scripts/                # 運用スクリプト
+│   ├── build-frontend.js
+│   ├── build-web-api.js
+│   └── fix-family-integration.js
 ├── test/
 │   ├── fixtures/          # テスト入力データ
 │   └── responses/         # テスト実行結果
 ├── docs/                   # プロジェクトドキュメント
-│   ├── current-status.md  # 現状把握
-│   ├── cdk-specification.md # 技術仕様
-│   └── development-report-phase1.md # 開発報告
+│   ├── current-status.md
+│   ├── cdk-specification.md
+│   ├── family-concept-verification.md
+│   └── lessons-learned/
+│       └── family-sharing-debug.md
 └── bin/                    # CDK エントリーポイント
     └── alexa-voice-memo.ts
 ```
@@ -105,15 +181,24 @@ aws lambda invoke --function-name alexa-voice-memo-dev-handler \
   "text": "牛乳を買う",                            // メモ内容
   "timestamp": "2025-07-12T16:15:54.854Z",       // 作成日時
   "deleted": "false",                             // 削除フラグ
-  "createdAt": "2025-07-12T16:15:54.854Z",
-  "updatedAt": "2025-07-12T16:15:54.854Z",
-  "version": 1
+  "familyId": "google-oauth2|123456789",          // 家族ID（初期値=userId）
+  "createdBy": "google-oauth2|123456789",         // 作成者ID
+  "createdByName": "太郎",                         // 作成者名
+  "updatedAt": "2025-07-12T16:15:54.854Z"
 }
 ```
 
 ### グローバルセカンダリインデックス
 - **timestamp-index**: 時系列でのメモ取得
 - **status-index**: 削除ステータスでのフィルタリング
+- **family-timestamp-index**: 家族単位でのメモ取得
+
+### 家族管理の設計思想
+- **familyId = userId**: 初期状態では自分のIDが家族ID
+- **簡単離婚システム**: 退出すると自分のfamilyIdに戻るだけ
+- **招待コード**: 4桁数字、5分で自動失効
+- **当主制度**: 家族の管理者（当主）が家督譲渡可能
+- **動的メニュー**: ユーザーの状態に応じてメニュー項目が自動変更
 
 ## 💰 運用コスト
 
@@ -157,6 +242,12 @@ aws lambda invoke --function-name alexa-voice-memo-dev-handler \
 - [x] 実機テスト完了
 - [x] Echo デバイス動作確認
 
+### ✅ Phase 5: Web UI & Family Features (完了)
+- [x] Google Sign-In認証実装
+- [x] Web UIでのメモ管理機能
+- [x] 家族共有機能（招待・参加・退出）
+- [x] 音声入力機能（Web Speech API）
+
 ### 🚀 Next: Optional Enhancements
 - [ ] Alexa Skills Store 公開申請
 - [ ] アイコン・プライバシーポリシー作成
@@ -169,16 +260,36 @@ aws lambda invoke --function-name alexa-voice-memo-dev-handler \
 - **[current-status.md](docs/current-status.md)**: 現在の実装状況詳細
 - **[cdk-specification.md](docs/cdk-specification.md)**: 技術仕様書
 - **[development-guide.md](docs/development-guide.md)**: 開発ガイド
-- **[development-report-phase1.md](docs/development-report-phase1.md)**: Phase 1開発報告
+- **[family-features-guide.md](docs/family-features-guide.md)**: 家族共有機能の使い方ガイド
+- **[family-concept-verification.md](docs/family-concept-verification.md)**: 家族機能設計検証
+- **[lessons-learned/family-sharing-debug.md](docs/lessons-learned/family-sharing-debug.md)**: 開発の教訓
 
 ## 🏗️ アーキテクチャ
 
 ```mermaid
-graph LR
-    A[Alexa Device] --> B[Alexa Skills Kit]
-    B --> C[Lambda Function]
-    C --> D[DynamoDB]
-    C --> E[CloudWatch Logs]
+graph TB
+    subgraph "Voice Interface"
+        A[Alexa Device] --> B[Alexa Skills Kit]
+        B --> C[Lambda Handler]
+    end
+    
+    subgraph "Web Interface"
+        D[Web Browser] --> E[Google Sign-In]
+        E --> F[S3 Static Site]
+        F --> G[API Gateway]
+        G --> H[Web API Lambda]
+    end
+    
+    subgraph "Data Layer"
+        C --> I[DynamoDB]
+        H --> I
+        I --> J[GSI: family-timestamp-index]
+    end
+    
+    subgraph "Monitoring"
+        C --> K[CloudWatch Logs]
+        H --> K
+    end
 ```
 
 ## 🔧 トラブルシューティング
@@ -197,6 +308,16 @@ graph LR
 
 3. **DynamoDBアクセスエラー**: IAMロール権限確認
 
+4. **音声入力が使えない**: 
+   - HTTPSでのアクセスが必要（ローカルホストは例外）
+   - ブラウザの音声入力許可を確認
+   - 対応ブラウザ（Chrome推奨）を使用
+
+5. **家族機能のトラブル**:
+   - 招待コードの有効期限（5分）を確認
+   - 当主の退出は家督譲渡が必要
+   - 詳細は[family-features-guide.md](docs/family-features-guide.md)参照
+
 ## 🤝 Contributing
 
 1. Issueを作成
@@ -213,4 +334,4 @@ MIT License - 詳細は [LICENSE](LICENSE) ファイルを参照
 **Project**: alexa-voice-memo  
 **Created**: 2025-07-12  
 **Methodology**: [ideanotes](https://github.com/goodsun/ideanotes) スモールスタート原則  
-**Status**: Phase 1 Complete ✅
+**Status**: 全機能実装完了 ✅

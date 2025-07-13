@@ -44,6 +44,23 @@ header h1 {
   font-weight: 600;
 }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.family-info {
+  font-size: 14px;
+  opacity: 0.9;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.family-info:hover {
+  opacity: 1;
+}
+
 /* フローティング音声入力ボタン */
 .voice-btn {
   position: fixed;
@@ -156,12 +173,12 @@ header h1 {
 
 .menu-item {
   width: 100%;
-  padding: 15px 20px;
+  padding: 10px 20px;
   background: none;
   border: none;
   border-bottom: 1px solid #e5e7eb;
   text-align: left;
-  font-size: 16px;
+  font-size: 13px;
   cursor: pointer;
   transition: background-color 0.2s;
 }
@@ -364,7 +381,7 @@ header h1 {
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 0;
-  padding: 8px;
+  padding: 4px 12px;
   margin-bottom: 0;
   position: relative;
   transition: transform 0.3s, box-shadow 0.3s;
@@ -394,7 +411,10 @@ header h1 {
 .memo-content {
   font-size: 16px;
   color: #333;
-  margin-bottom: 8px;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .memo-timestamp {
@@ -542,7 +562,7 @@ header h1 {
   }
 
   header {
-    padding: 16px;
+    padding: 5px 5px 5px 16px;
   }
 
   header h1 {
@@ -559,4 +579,419 @@ header h1 {
     width: 56px;
     height: 56px;
   }
+}
+
+/* ユーザー情報（メニュー上部） */
+.user-info {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  background-color: #f8f9fa;
+  gap: 12px;
+}
+
+.user-avatar {
+  position: relative;
+  width: 48px;
+  height: 48px;
+}
+
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-avatar-fallback {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #6b7280;
+}
+
+.user-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-name {
+  font-weight: 600;
+  font-size: 16px;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-email {
+  font-size: 13px;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* バージョン情報（メニュー下部） */
+.version-info {
+  padding: 10px 20px;
+  text-align: center;
+  background-color: #f8f9fa;
+}
+
+.version-info span {
+  font-size: 12px;
+  color: #9ca3af;
+  font-family: monospace;
+}
+
+/* 家族機能関連 */
+.menu-separator {
+  height: 3px;
+  background-color: #f4f4f4;
+  margin: 0;
+}
+
+.invite-code-display {
+  text-align: center;
+  margin: 30px 0;
+}
+
+.invite-code {
+  font-size: 48px;
+  font-weight: bold;
+  letter-spacing: 10px;
+  color: #0e2246;
+  font-family: monospace;
+}
+
+.invite-info {
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.alexa-invite-section {
+  background-color: #f0f9ff;
+  border: 1px solid #e0f2fe;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 20px 0;
+}
+
+.alexa-invite-section h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  color: #0369a1;
+}
+
+.alexa-steps p {
+  margin: 8px 0;
+  color: #374151;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.alexa-code {
+  font-family: monospace;
+  font-weight: bold;
+  color: #0e2246;
+  background-color: #f3f4f6;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.join-code-input {
+  width: 100%;
+  padding: 15px;
+  font-size: 24px;
+  text-align: center;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  margin: 20px 0;
+  letter-spacing: 5px;
+  font-family: monospace;
+}
+
+.join-code-input:focus {
+  outline: none;
+  border-color: #0e2246;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.primary-btn,
+.secondary-btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.primary-btn {
+  background-color: #0e2246;
+  color: white;
+}
+
+.primary-btn:hover {
+  background-color: #1a3a6e;
+}
+
+.secondary-btn {
+  background-color: #e5e7eb;
+  color: #333;
+}
+
+.secondary-btn:hover {
+  background-color: #d1d5db;
+}
+
+.members-list {
+  margin: 20px 0;
+}
+
+.member-item {
+  padding: 15px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.member-name {
+  font-weight: 500;
+}
+
+.member-badge {
+  background-color: #f3f4f6;
+  color: #6b7280;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.member-badge.owner {
+  background-color: #0e2246;
+  color: white;
+}
+
+.member-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+}
+
+.transfer-btn {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  margin-right: 10px;
+  transition: background-color 0.2s;
+}
+
+.transfer-btn:hover {
+  background-color: #2563eb;
+}
+
+/* メモアイテムに作成者表示 */
+.memo-creator {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+/* タイムスタンプと作成者を横並びに */
+.memo-metadata {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.memo-metadata .memo-timestamp,
+.memo-metadata .memo-creator {
+  margin: 0;
+}
+
+/* 全文表示ダイアログ */
+.full-text-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  padding: 15px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  z-index: 10001;
+  display: none;
+}
+
+.full-text-dialog.show {
+  display: block;
+}
+
+.full-text-content {
+  font-size: 16px;
+  color: #333;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 10px 0;
+}
+
+.full-text-close {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 20px;
+  color: #878f9e;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.full-text-close:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.full-text-metadata {
+  font-size: 12px;
+  color: #6b7280;
+  text-align: right;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* 家族メンバーアイコン */
+.family-icons-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.family-member-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  object-fit: cover;
+  border: solid 1px #bbbbbb;
+}
+
+.family-member-initial {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #4285f4;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.family-more-count {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #6b7280;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* 重なり効果 */
+.family-icons-container > *:not(:first-child) {
+  margin-left: 0px;
+}
+
+/* 家族人数表示 */
+.family-count {
+  margin-left: 8px;
+  font-size: 14px;
+  color: #cccccc;
+  font-weight: normal;
+}
+
+/* ログイン画面 */
+.login-screen {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #f8f9fa;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.login-content {
+  text-align: center;
+  padding: 40px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  max-width: 400px;
+  width: 90%;
+}
+
+.login-content h2 {
+  color: #0e2246;
+  margin-bottom: 10px;
+  font-size: 32px;
+}
+
+.login-content p {
+  color: #6b7280;
+  margin-bottom: 30px;
+  font-size: 16px;
+}
+
+#googleSignInButton {
+  display: flex;
+  justify-content: center;
 }

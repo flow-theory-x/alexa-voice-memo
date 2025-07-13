@@ -6,11 +6,15 @@
   },
   "scripts": {
     "build": "tsc",
+    "build:frontend": "node scripts/build-frontend.js",
+    "build:frontend:dev": "node scripts/build-frontend.js --env=dev",
+    "build:frontend:stg": "node scripts/build-frontend.js --env=stg", 
+    "build:frontend:prod": "node scripts/build-frontend.js --env=prod",
     "watch": "tsc -w",
     "test": "jest",
     "cdk": "cdk",
-    "deploy:frontend": "aws s3 sync ./public/ s3://$(aws cloudformation describe-stacks --stack-name alexa-voice-memo-${CDK_ENV:-dev} --query 'Stacks[0].Outputs[?OutputKey==`FrontendBucketName`].OutputValue' --output text) --delete",
-    "deploy:ec2": "rsync -avz --delete ./public/ ec2-user@${EC2_HOST}:/var/www/memo/"
+    "deploy:frontend": "npm run build:frontend && aws s3 sync ./build/frontend/ s3://$(aws cloudformation describe-stacks --stack-name alexa-voice-memo-${CDK_ENV:-dev} --query 'Stacks[0].Outputs[?OutputKey==`FrontendBucketName`].OutputValue' --output text) --delete",
+    "deploy:ec2": "npm run build:frontend && rsync -avz --delete ./build/frontend/ ec2-user@${EC2_HOST}:/var/www/memo/"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.150",
@@ -29,6 +33,7 @@
     "@codegenie/serverless-express": "^4.17.0",
     "aws-cdk-lib": "2.200.1",
     "constructs": "^10.0.0",
+    "dotenv": "^16.0.0",
     "express": "^5.1.0"
   }
 }

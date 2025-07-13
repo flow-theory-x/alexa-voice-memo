@@ -12,30 +12,25 @@
             }
           ],
           "samples": [
+            "{memoText} を追加",
             "{memoText} をメモして",
-            "{memoText} をメモに追加",
-            "{memoText} を覚えておいて",
             "メモ {memoText}",
+            "追加 {memoText}",
             "{memoText} メモ",
-            "{memoText} を追加して",
-            "{memoText} を保存して",
-            "{memoText} を記録して"
+            "{memoText} を保存",
+            "{memoText} を記録"
           ]
         },
         {
           "name": "ReadMemosIntent",
           "slots": [],
           "samples": [
-            "メモを読んで",
+            "一覧を読んで",
             "メモを教えて",
-            "メモを確認",
-            "メモの内容は",
-            "メモ一覧",
-            "メモを読み上げて",
-            "メモを聞かせて",
-            "保存したメモは",
-            "メモはある",
-            "メモを表示"
+            "内容確認",
+            "確認",
+            "読み上げ",
+            "一覧"
           ]
         },
         {
@@ -47,11 +42,11 @@
             }
           ],
           "samples": [
+            "{memoNumber} 番を削除",
             "{memoNumber} 番目のメモを削除",
             "{memoNumber} 番のメモを消して",
             "メモ {memoNumber} を削除",
             "{memoNumber} 番目を消して",
-            "{memoNumber} 番を削除",
             "{memoNumber} 番目のメモを削除して",
             "メモの {memoNumber} 番を消して",
             "{memoNumber} を削除"
@@ -70,6 +65,35 @@
             "メモを全て消す",
             "すべて削除",
             "全削除"
+          ]
+        },
+        {
+          "name": "JoinFamilyIntent",
+          "slots": [
+            {
+              "name": "inviteCode",
+              "type": "AMAZON.FOUR_DIGIT_NUMBER"
+            }
+          ],
+          "samples": [
+            "招待コード {inviteCode} で参加",
+            "招待コード {inviteCode} で家族に参加",
+            "{inviteCode} で参加",
+            "{inviteCode} で家族に参加して",
+            "招待番号 {inviteCode} で参加",
+            "家族コード {inviteCode}",
+            "コード {inviteCode} で参加",
+            "家族に参加 コードは {inviteCode}",
+            "参加コード {inviteCode}",
+            "{inviteCode} で家族登録",
+            "家族参加 {inviteCode}",
+            "番号 {inviteCode} で参加",
+            "{inviteCode} 番で参加",
+            "コード番号 {inviteCode}",
+            "{inviteCode} を使って参加",
+            "招待 {inviteCode}",
+            "家族 {inviteCode}",
+            "{inviteCode} 参加"
           ]
         },
         {
@@ -96,29 +120,15 @@
         },
         {
           "name": "AMAZON.HelpIntent",
-          "samples": [
-            "ヘルプ",
-            "使い方",
-            "どうやって使うの",
-            "何ができるの"
-          ]
+          "samples": ["ヘルプ", "使い方", "どうやって使うの", "何ができるの"]
         },
         {
           "name": "AMAZON.CancelIntent",
-          "samples": [
-            "キャンセル",
-            "やめる",
-            "中止"
-          ]
+          "samples": ["キャンセル", "やめる", "中止"]
         },
         {
           "name": "AMAZON.StopIntent",
-          "samples": [
-            "ストップ",
-            "終了",
-            "閉じて",
-            "バイバイ"
-          ]
+          "samples": ["ストップ", "終了", "閉じて", "バイバイ"]
         }
       ],
       "types": []
