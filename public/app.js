@@ -21,16 +21,49 @@ const helpBtn = document.getElementById('help-btn');
 const helpModal = document.getElementById('help-modal');
 const closeHelpBtn = document.getElementById('close-help-btn');
 const pullToRefresh = document.getElementById('pull-to-refresh');
+const voiceBtn = document.getElementById('voice-btn');
+const voiceModal = document.getElementById('voice-modal');
+const voiceCancelBtn = document.getElementById('voice-cancel-btn');
+const voiceStatus = document.querySelector('.voice-status');
+
+// 音声認識オブジェクト
+let recognition = null;
 
 // 初期化
 document.addEventListener('DOMContentLoaded', () => {
     loadMemos();
     setupEventListeners();
     setupPullToRefresh();
+    checkVoiceSupport();
 });
+
+// 音声入力サポートチェック
+function checkVoiceSupport() {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        // サポートしていない場合はボタンを非表示
+        voiceBtn.style.display = 'none';
+        console.log('Web Speech API is not supported in this browser');
+    }
+}
 
 // イベントリスナー設定
 function setupEventListeners() {
+    // 音声入力ボタン
+    voiceBtn.addEventListener('click', () => {
+        startVoiceInput();
+    });
+
+    // 音声入力キャンセル
+    voiceCancelBtn.addEventListener('click', () => {
+        stopVoiceInput();
+    });
+
+    // モーダル外クリックでキャンセル
+    voiceModal.addEventListener('click', (e) => {
+        if (e.target === voiceModal) {
+            stopVoiceInput();
+        }
+    });
     // メニューボタン
     menuBtn.addEventListener('click', () => {
         openMenu();
@@ -510,4 +543,109 @@ function showError() {
 
 function hideError() {
     error.style.display = 'none';
+}
+
+// 音声入力開始
+function startVoiceInput() {
+    // Web Speech APIのサポート確認
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        alert('ご利用のブラウザは音声入力に対応していません');
+        return;
+    }
+
+    // 音声認識オブジェクトの初期化
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    
+    // 設定
+    recognition.lang = 'ja-JP';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    // モーダル表示
+    voiceModal.classList.add('active');
+    voiceBtn.classList.add('recording');
+    voiceStatus.textContent = '話してください...';
+
+    // 認識結果の処理
+    recognition.onresult = async (event) => {
+        const transcript = event.results[0][0].transcript;
+        voiceStatus.textContent = '認識中: "' + transcript + '"';
+        
+        // メモとして追加
+        await addMemoFromVoice(transcript);
+        
+        // モーダルを閉じる
+        setTimeout(() => {
+            stopVoiceInput();
+        }, 1000);
+    };
+
+    // エラー処理
+    recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        let errorMessage = 'エラーが発生しました';
+        
+        switch(event.error) {
+            case 'no-speech':
+                errorMessage = '音声が検出されませんでした';
+                break;
+            case 'audio-capture':
+                errorMessage = 'マイクが使用できません';
+                break;
+            case 'not-allowed':
+                errorMessage = 'マイクの使用が許可されていません';
+                break;
+        }
+        
+        voiceStatus.textContent = errorMessage;
+        setTimeout(() => {
+            stopVoiceInput();
+        }, 2000);
+    };
+
+    // 認識終了時
+    recognition.onend = () => {
+        voiceBtn.classList.remove('recording');
+    };
+
+    // 認識開始
+    recognition.start();
+}
+
+// 音声入力停止
+function stopVoiceInput() {
+    if (recognition) {
+        recognition.stop();
+    }
+    voiceModal.classList.remove('active');
+    voiceBtn.classList.remove('recording');
+}
+
+// 音声からメモ追加
+async function addMemoFromVoice(content) {
+    if (!content) return;
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/memos`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ content })
+        });
+        
+        if (!response.ok) throw new Error('Failed to add memo');
+        
+        // 成功メッセージ
+        voiceStatus.textContent = 'メモを追加しました！';
+        
+        // リロード
+        await loadMemos();
+        
+    } catch (err) {
+        console.error('Error adding memo:', err);
+        voiceStatus.textContent = 'メモの追加に失敗しました';
+    }
 }
