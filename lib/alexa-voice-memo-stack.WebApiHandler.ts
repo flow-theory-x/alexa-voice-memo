@@ -1,7 +1,7 @@
 import express from 'express';
 import serverlessExpress from '@codegenie/serverless-express';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, ScanCommand, UpdateCommand, DeleteCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, ScanCommand, UpdateCommand, DeleteCommand, PutCommand, GetCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 
 const app = express();
 app.use(express.json());
@@ -22,13 +22,35 @@ app.use((req, res, next) => {
 const client = new DynamoDBClient({ region: process.env.AWS_REGION || 'ap-northeast-1' });
 const docClient = DynamoDBDocumentClient.from(client);
 const tableName = process.env.MEMO_TABLE_NAME!;
+const inviteCodeTableName = process.env.INVITE_CODE_TABLE_NAME!;
 
-// GET /api/memos - メモ一覧取得（全ユーザー分、削除済み含む）
+// GET /api/memos - メモ一覧取得（家族メモ、削除済み含む）
 app.get('/api/memos', async (req, res) => {
   try {
-    // Scan操作で全ユーザーのメモを取得（削除済み含む）
-    const command = new ScanCommand({
+    const userId = req.headers['x-user-id'] as string || 'web-user';
+    
+    // まずユーザー情報を取得してfamilyIdを確認
+    const userScan = new ScanCommand({
       TableName: tableName,
+      FilterExpression: 'userId = :userId',
+      ExpressionAttributeValues: {
+        ':userId': userId
+      },
+      Limit: 1
+    });
+    
+    const userResult = await docClient.send(userScan);
+    const familyId = userResult.Items?.[0]?.familyId || userId;
+    
+    // familyIdでメモを取得（GSIを使用）
+    const command = new QueryCommand({
+      TableName: tableName,
+      IndexName: 'family-timestamp-index',
+      KeyConditionExpression: 'familyId = :familyId',
+      ExpressionAttributeValues: {
+        ':familyId': familyId
+      },
+      ScanIndexForward: false,
       Limit: 200
     });
 
@@ -63,7 +85,9 @@ app.get('/api/memos', async (req, res) => {
         content: item.text,
         timestamp: item.timestamp,
         userId: item.userId,
-        deleted: item.deleted === 'true'
+        deleted: item.deleted === 'true',
+        createdByName: item.createdByName,
+        familyId: item.familyId
       }))
       .sort((a, b) => {
         // まず削除フラグでソート（削除されていないものが上）
@@ -86,15 +110,29 @@ app.get('/api/memos', async (req, res) => {
 app.post('/api/memos', async (req, res) => {
   try {
     const { content } = req.body;
+    const userId = req.headers['x-user-id'] as string || 'web-user';
+    const userName = req.headers['x-user-name'] as string || 'Webユーザー';
     
     if (!content) {
       res.status(400).json({ error: 'Content is required' });
       return;
     }
     
+    // ユーザー情報を取得してfamilyIdを確認
+    const userScan = new ScanCommand({
+      TableName: tableName,
+      FilterExpression: 'userId = :userId',
+      ExpressionAttributeValues: {
+        ':userId': userId
+      },
+      Limit: 1
+    });
+    
+    const userResult = await docClient.send(userScan);
+    const familyId = userResult.Items?.[0]?.familyId || userId;
+    
     // UUIDを生成
     const memoId = `memo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const userId = 'web-user'; // Web UIから追加された場合のデフォルトユーザー
     const timestamp = new Date().toISOString();
     
     const putCommand = new PutCommand({
@@ -107,7 +145,9 @@ app.post('/api/memos', async (req, res) => {
         deleted: 'false',
         createdAt: timestamp,
         updatedAt: timestamp,
-        version: 1
+        version: 1,
+        familyId,
+        createdByName: userName
       }
     });
     
@@ -271,6 +311,230 @@ app.put('/api/memos/:id/restore', async (req, res) => {
   } catch (error) {
     console.error('Error restoring memo:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ========== 家族管理API ==========
+
+// POST /api/family/invite-codes - 招待コード生成
+app.post('/api/family/invite-codes', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'] as string || 'web-user';
+    
+    // ユーザー情報を取得してfamilyIdを確認
+    const userScan = new ScanCommand({
+      TableName: tableName,
+      FilterExpression: 'userId = :userId',
+      ExpressionAttributeValues: {
+        ':userId': userId
+      },
+      Limit: 1
+    });
+    
+    const userResult = await docClient.send(userScan);
+    const familyId = userResult.Items?.[0]?.familyId || userId;
+    
+    // 4桁の招待コード生成
+    const code = Math.floor(1000 + Math.random() * 9000).toString();
+    const ttl = Math.floor(Date.now() / 1000) + 300; // 5分後に失効
+    
+    const putCommand = new PutCommand({
+      TableName: inviteCodeTableName,
+      Item: {
+        code,
+        familyId,
+        createdAt: new Date().toISOString(),
+        ttl
+      }
+    });
+    
+    await docClient.send(putCommand);
+    res.json({ code, expiresIn: 300 });
+  } catch (error) {
+    console.error('Error creating invite code:', error);
+    res.status(500).json({ error: '招待コードの生成に失敗しました' });
+  }
+});
+
+// POST /api/family/join - 家族に参加
+app.post('/api/family/join', async (req, res) => {
+  try {
+    const { inviteCode } = req.body;
+    const userId = req.headers['x-user-id'] as string || 'web-user';
+    
+    if (!inviteCode) {
+      res.status(400).json({ error: '招待コードが必要です' });
+      return;
+    }
+    
+    // 招待コードを検証
+    const getCommand = new GetCommand({
+      TableName: inviteCodeTableName,
+      Key: { code: inviteCode }
+    });
+    
+    const codeResult = await docClient.send(getCommand);
+    if (!codeResult.Item) {
+      res.status(404).json({ error: '招待コードが無効です' });
+      return;
+    }
+    
+    const { familyId } = codeResult.Item;
+    
+    // ユーザーのfamilyIdを更新
+    const updateCommand = new UpdateCommand({
+      TableName: tableName,
+      Key: { userId, memoId: userId }, // ユーザー情報用のダミーレコード
+      UpdateExpression: 'SET familyId = :familyId, updatedAt = :updatedAt',
+      ExpressionAttributeValues: {
+        ':familyId': familyId,
+        ':updatedAt': new Date().toISOString()
+      },
+      ReturnValues: 'ALL_NEW'
+    });
+    
+    await docClient.send(updateCommand);
+    
+    // 招待コードを削除
+    const deleteCommand = new DeleteCommand({
+      TableName: inviteCodeTableName,
+      Key: { code: inviteCode }
+    });
+    await docClient.send(deleteCommand);
+    
+    res.json({ success: true, familyId });
+  } catch (error) {
+    console.error('Error joining family:', error);
+    res.status(500).json({ error: '家族への参加に失敗しました' });
+  }
+});
+
+// POST /api/family/leave - 家族から退出
+app.post('/api/family/leave', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'] as string || 'web-user';
+    
+    // ユーザーのfamilyIdを自分のuserIdに戻す
+    const updateCommand = new UpdateCommand({
+      TableName: tableName,
+      Key: { userId, memoId: userId },
+      UpdateExpression: 'SET familyId = :familyId, updatedAt = :updatedAt',
+      ExpressionAttributeValues: {
+        ':familyId': userId,
+        ':updatedAt': new Date().toISOString()
+      }
+    });
+    
+    await docClient.send(updateCommand);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error leaving family:', error);
+    res.status(500).json({ error: '家族からの退出に失敗しました' });
+  }
+});
+
+// POST /api/family/transfer-owner - 筆頭者移譲
+app.post('/api/family/transfer-owner', async (req, res) => {
+  try {
+    const { newOwnerUserId } = req.body;
+    const userId = req.headers['x-user-id'] as string || 'web-user';
+    
+    if (!newOwnerUserId) {
+      res.status(400).json({ error: '新しい筆頭者のユーザーIDが必要です' });
+      return;
+    }
+    
+    // 現在のfamilyIdを取得
+    const userScan = new ScanCommand({
+      TableName: tableName,
+      FilterExpression: 'userId = :userId',
+      ExpressionAttributeValues: {
+        ':userId': userId
+      },
+      Limit: 1
+    });
+    
+    const userResult = await docClient.send(userScan);
+    const currentFamilyId = userResult.Items?.[0]?.familyId || userId;
+    
+    // 筆頭者チェック（familyId === userId）
+    if (currentFamilyId !== userId) {
+      res.status(403).json({ error: '筆頭者のみが移譲できます' });
+      return;
+    }
+    
+    // 全メンバーのfamilyIdを新しい筆頭者のuserIdに更新
+    const scanCommand = new ScanCommand({
+      TableName: tableName,
+      FilterExpression: 'familyId = :familyId',
+      ExpressionAttributeValues: {
+        ':familyId': currentFamilyId
+      }
+    });
+    
+    const membersResult = await docClient.send(scanCommand);
+    const updatePromises = (membersResult.Items || []).map(item => {
+      const updateCmd = new UpdateCommand({
+        TableName: tableName,
+        Key: { 
+          userId: item.userId,
+          memoId: item.memoId
+        },
+        UpdateExpression: 'SET familyId = :newFamilyId, updatedAt = :updatedAt',
+        ExpressionAttributeValues: {
+          ':newFamilyId': newOwnerUserId,
+          ':updatedAt': new Date().toISOString()
+        }
+      });
+      return docClient.send(updateCmd);
+    });
+    
+    await Promise.all(updatePromises);
+    res.json({ success: true, newFamilyId: newOwnerUserId });
+  } catch (error) {
+    console.error('Error transferring ownership:', error);
+    res.status(500).json({ error: '筆頭者の移譲に失敗しました' });
+  }
+});
+
+// GET /api/family/members - メンバー一覧
+app.get('/api/family/members', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'] as string || 'web-user';
+    
+    // ユーザーのfamilyIdを取得
+    const userScan = new ScanCommand({
+      TableName: tableName,
+      FilterExpression: 'userId = :userId',
+      ExpressionAttributeValues: {
+        ':userId': userId
+      },
+      Limit: 1
+    });
+    
+    const userResult = await docClient.send(userScan);
+    const familyId = userResult.Items?.[0]?.familyId || userId;
+    
+    // 同じfamilyIdを持つユーザーを取得
+    const membersCommand = new ScanCommand({
+      TableName: tableName,
+      FilterExpression: 'familyId = :familyId AND userId = memoId',
+      ExpressionAttributeValues: {
+        ':familyId': familyId
+      }
+    });
+    
+    const membersResult = await docClient.send(membersCommand);
+    const members = (membersResult.Items || []).map(item => ({
+      userId: item.userId,
+      name: item.createdByName || 'ユーザー',
+      isOwner: item.userId === familyId
+    }));
+    
+    res.json({ familyId, members });
+  } catch (error) {
+    console.error('Error fetching family members:', error);
+    res.status(500).json({ error: 'メンバー一覧の取得に失敗しました' });
   }
 });
 

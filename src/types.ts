@@ -71,4 +71,8 @@ export interface MemoItem {
   createdAt: string;
   updatedAt: string;
   version: number;
+  familyId?: string;
+  createdByName?: string;
+  completedAt?: string;
+  completedBy?: string;
 }

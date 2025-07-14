@@ -44,6 +44,23 @@ header h1 {
   font-weight: 600;
 }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.family-info {
+  font-size: 14px;
+  opacity: 0.9;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.family-info:hover {
+  opacity: 1;
+}
+
 /* フローティング音声入力ボタン */
 .voice-btn {
   position: fixed;
@@ -559,4 +576,120 @@ header h1 {
     width: 56px;
     height: 56px;
   }
+}
+
+/* 家族機能関連 */
+.menu-separator {
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.1);
+  margin: 5px 0;
+}
+
+.invite-code-display {
+  text-align: center;
+  margin: 30px 0;
+}
+
+.invite-code {
+  font-size: 48px;
+  font-weight: bold;
+  letter-spacing: 10px;
+  color: #0e2246;
+  font-family: monospace;
+}
+
+.invite-info {
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.join-code-input {
+  width: 100%;
+  padding: 15px;
+  font-size: 24px;
+  text-align: center;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  margin: 20px 0;
+  letter-spacing: 5px;
+  font-family: monospace;
+}
+
+.join-code-input:focus {
+  outline: none;
+  border-color: #0e2246;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.primary-btn, .secondary-btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.primary-btn {
+  background-color: #0e2246;
+  color: white;
+}
+
+.primary-btn:hover {
+  background-color: #1a3a6e;
+}
+
+.secondary-btn {
+  background-color: #e5e7eb;
+  color: #333;
+}
+
+.secondary-btn:hover {
+  background-color: #d1d5db;
+}
+
+.members-list {
+  margin: 20px 0;
+}
+
+.member-item {
+  padding: 15px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.member-name {
+  font-weight: 500;
+}
+
+.member-badge {
+  background-color: #f3f4f6;
+  color: #6b7280;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.member-badge.owner {
+  background-color: #0e2246;
+  color: white;
+}
+
+/* メモアイテムに作成者表示 */
+.memo-creator {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 4px;
 }

@@ -5,6 +5,9 @@ const API_BASE_URL = 'https://99nb4tfwu6.execute-api.ap-northeast-1.amazonaws.co
 let memos = [];
 let isLoading = false;
 let isRefreshing = false;
+let currentUserId = 'web-user';
+let currentUserName = 'Webユーザー';
+let familyMembers = [];
 
 // DOM要素
 const memoList = document.getElementById('memo-list');
@@ -25,6 +28,22 @@ const voiceBtn = document.getElementById('voice-btn');
 const voiceModal = document.getElementById('voice-modal');
 const voiceCancelBtn = document.getElementById('voice-cancel-btn');
 const voiceStatus = document.querySelector('.voice-status');
+const familyInfo = document.getElementById('family-info');
+const familyMembersCount = document.getElementById('family-members-count');
+const inviteFamilyBtn = document.getElementById('invite-family-btn');
+const joinFamilyBtn = document.getElementById('join-family-btn');
+const leaveFamilyBtn = document.getElementById('leave-family-btn');
+const familyMembersBtn = document.getElementById('family-members-btn');
+const inviteModal = document.getElementById('invite-modal');
+const inviteCode = document.getElementById('invite-code');
+const closeInviteBtn = document.getElementById('close-invite-btn');
+const joinModal = document.getElementById('join-modal');
+const joinCodeInput = document.getElementById('join-code-input');
+const joinSubmitBtn = document.getElementById('join-submit-btn');
+const cancelJoinBtn = document.getElementById('cancel-join-btn');
+const membersModal = document.getElementById('members-modal');
+const membersList = document.getElementById('members-list');
+const closeMembersBtn = document.getElementById('close-members-btn');
 
 // 音声認識オブジェクト
 let recognition = null;
@@ -35,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     setupPullToRefresh();
     checkVoiceSupport();
+    loadFamilyMembers();
 });
 
 // 音声入力サポートチェック
@@ -111,6 +131,73 @@ function setupEventListeners() {
     helpModal.addEventListener('click', (e) => {
         if (e.target === helpModal) {
             hideHelp();
+        }
+    });
+
+    // 家族機能のイベントリスナー
+    inviteFamilyBtn.addEventListener('click', () => {
+        closeMenu();
+        generateInviteCode();
+    });
+
+    joinFamilyBtn.addEventListener('click', () => {
+        closeMenu();
+        joinModal.style.display = 'flex';
+        joinCodeInput.value = '';
+        joinCodeInput.focus();
+    });
+
+    leaveFamilyBtn.addEventListener('click', () => {
+        closeMenu();
+        leaveFamily();
+    });
+
+    familyMembersBtn.addEventListener('click', () => {
+        closeMenu();
+        showFamilyMembers();
+    });
+
+    familyInfo.addEventListener('click', () => {
+        showFamilyMembers();
+    });
+
+    closeInviteBtn.addEventListener('click', () => {
+        inviteModal.style.display = 'none';
+    });
+
+    inviteModal.addEventListener('click', (e) => {
+        if (e.target === inviteModal) {
+            inviteModal.style.display = 'none';
+        }
+    });
+
+    joinSubmitBtn.addEventListener('click', () => {
+        joinFamily();
+    });
+
+    cancelJoinBtn.addEventListener('click', () => {
+        joinModal.style.display = 'none';
+    });
+
+    joinModal.addEventListener('click', (e) => {
+        if (e.target === joinModal) {
+            joinModal.style.display = 'none';
+        }
+    });
+
+    joinCodeInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            joinFamily();
+        }
+    });
+
+    closeMembersBtn.addEventListener('click', () => {
+        membersModal.style.display = 'none';
+    });
+
+    membersModal.addEventListener('click', (e) => {
+        if (e.target === membersModal) {
+            membersModal.style.display = 'none';
         }
     });
 }
@@ -190,7 +277,11 @@ async function loadMemos() {
     hideError();
 
     try {
-        const response = await fetch(`${API_BASE_URL}/api/memos`);
+        const response = await fetch(`${API_BASE_URL}/api/memos`, {
+            headers: {
+                'x-user-id': currentUserId
+            }
+        });
         if (!response.ok) throw new Error('Failed to fetch memos');
         
         memos = await response.json();
@@ -237,6 +328,14 @@ function createMemoElement(memo) {
     const timestamp = document.createElement('div');
     timestamp.className = 'memo-timestamp';
     timestamp.textContent = formatTimestamp(memo.timestamp);
+    
+    // 作成者表示を追加
+    if (memo.createdByName) {
+        const creator = document.createElement('div');
+        creator.className = 'memo-creator';
+        creator.textContent = `by ${memo.createdByName}`;
+        div.appendChild(creator);
+    }
     
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'delete-btn';
@@ -430,7 +529,9 @@ async function addMemo() {
         const response = await fetch(`${API_BASE_URL}/api/memos`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'x-user-id': currentUserId,
+                'x-user-name': currentUserName
             },
             body: JSON.stringify({ content })
         });
@@ -631,7 +732,9 @@ async function addMemoFromVoice(content) {
         const response = await fetch(`${API_BASE_URL}/api/memos`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'x-user-id': currentUserId,
+                'x-user-name': currentUserName
             },
             body: JSON.stringify({ content })
         });
@@ -648,4 +751,149 @@ async function addMemoFromVoice(content) {
         console.error('Error adding memo:', err);
         voiceStatus.textContent = 'メモの追加に失敗しました';
     }
+}
+
+// ========== 家族機能 ==========
+
+// 家族メンバー読み込み
+async function loadFamilyMembers() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/family/members`, {
+            headers: {
+                'x-user-id': currentUserId
+            }
+        });
+        
+        if (!response.ok) throw new Error('Failed to load family members');
+        
+        const data = await response.json();
+        familyMembers = data.members || [];
+        
+        // メンバー数を表示
+        const memberCount = familyMembers.length;
+        familyMembersCount.textContent = memberCount > 1 ? `👨‍👩‍👧‍👦 ${memberCount}` : '👤 1';
+        
+    } catch (err) {
+        console.error('Error loading family members:', err);
+    }
+}
+
+// 招待コード生成
+async function generateInviteCode() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/family/invite-codes`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-user-id': currentUserId
+            }
+        });
+        
+        if (!response.ok) throw new Error('Failed to generate invite code');
+        
+        const data = await response.json();
+        inviteCode.textContent = data.code;
+        inviteModal.style.display = 'flex';
+        
+        // 5分後にモーダルを自動で閉じる
+        setTimeout(() => {
+            inviteModal.style.display = 'none';
+        }, 300000);
+        
+    } catch (err) {
+        console.error('Error generating invite code:', err);
+        alert('招待コードの生成に失敗しました');
+    }
+}
+
+// 家族に参加
+async function joinFamily() {
+    const code = joinCodeInput.value.trim();
+    if (code.length !== 4) {
+        alert('4桁の招待コードを入力してください');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/family/join`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-user-id': currentUserId
+            },
+            body: JSON.stringify({ inviteCode: code })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to join family');
+        }
+        
+        joinModal.style.display = 'none';
+        alert('家族に参加しました！');
+        
+        // リロード
+        await loadMemos();
+        await loadFamilyMembers();
+        
+    } catch (err) {
+        console.error('Error joining family:', err);
+        alert(err.message || '家族への参加に失敗しました');
+    }
+}
+
+// 家族から退出
+async function leaveFamily() {
+    if (!confirm('家族から退出しますか？\n自分だけのメモに戻ります。')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/family/leave`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-user-id': currentUserId
+            }
+        });
+        
+        if (!response.ok) throw new Error('Failed to leave family');
+        
+        alert('家族から退出しました');
+        
+        // リロード
+        await loadMemos();
+        await loadFamilyMembers();
+        
+    } catch (err) {
+        console.error('Error leaving family:', err);
+        alert('家族からの退出に失敗しました');
+    }
+}
+
+// メンバー一覧表示
+async function showFamilyMembers() {
+    await loadFamilyMembers();
+    
+    membersList.innerHTML = '';
+    
+    familyMembers.forEach(member => {
+        const memberItem = document.createElement('div');
+        memberItem.className = 'member-item';
+        
+        const memberName = document.createElement('div');
+        memberName.className = 'member-name';
+        memberName.textContent = member.name;
+        
+        const memberBadge = document.createElement('div');
+        memberBadge.className = member.isOwner ? 'member-badge owner' : 'member-badge';
+        memberBadge.textContent = member.isOwner ? '筆頭者' : 'メンバー';
+        
+        memberItem.appendChild(memberName);
+        memberItem.appendChild(memberBadge);
+        membersList.appendChild(memberItem);
+    });
+    
+    membersModal.style.display = 'flex';
 }
