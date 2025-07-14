@@ -5,8 +5,8 @@ const API_BASE_URL = 'https://99nb4tfwu6.execute-api.ap-northeast-1.amazonaws.co
 let memos = [];
 let isLoading = false;
 let isRefreshing = false;
-let currentUserId = 'web-user';
-let currentUserName = 'Webユーザー';
+let currentUserId = null;
+let currentUserName = null;
 let familyMembers = [];
 
 // DOM要素
@@ -50,12 +50,38 @@ let recognition = null;
 
 // 初期化
 document.addEventListener('DOMContentLoaded', () => {
+    initializeUser();
     loadMemos();
     setupEventListeners();
     setupPullToRefresh();
     checkVoiceSupport();
     loadFamilyMembers();
 });
+
+// ユーザー初期化
+function initializeUser() {
+    // ローカルストレージから既存のユーザー情報を取得
+    const savedUserId = localStorage.getItem('userId');
+    const savedUserName = localStorage.getItem('userName');
+    
+    if (savedUserId && savedUserName) {
+        // 既存ユーザー
+        currentUserId = savedUserId;
+        currentUserName = savedUserName;
+    } else {
+        // 新規ユーザー
+        const userName = prompt('お名前を入力してください:', '') || 'ゲスト';
+        const timestamp = Date.now();
+        const randomId = Math.random().toString(36).substring(2, 9);
+        
+        currentUserId = `web-${timestamp}-${randomId}`;
+        currentUserName = userName;
+        
+        // ローカルストレージに保存
+        localStorage.setItem('userId', currentUserId);
+        localStorage.setItem('userName', currentUserName);
+    }
+}
 
 // 音声入力サポートチェック
 function checkVoiceSupport() {
