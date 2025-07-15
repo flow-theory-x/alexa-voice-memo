@@ -47,13 +47,13 @@ Table Design:
   Sort Key: memoId (String)
   
 Global Secondary Indexes:
-  timestamp-index:
-    Partition Key: userId
+  family-timestamp-index:
+    Partition Key: familyId
     Sort Key: timestamp
     
-  status-index:
-    Partition Key: userId  
-    Sort Key: deleted
+  family-updatedAt-index:
+    Partition Key: familyId  
+    Sort Key: updatedAt
 ```
 
 ## 🔄 Data Flow
@@ -95,30 +95,41 @@ Global Secondary Indexes:
 ### CDK Stack Structure
 ```typescript
 AlexaVoiceMemoStack
-├── DynamoDB Table
+├── DynamoDB Tables
 │   ├── Main Table (memos)
-│   ├── GSI: timestamp-index
-│   └── GSI: status-index
-├── Lambda Function
-│   ├── Handler Code
-│   ├── Environment Variables
-│   └── IAM Role
-└── CloudWatch Log Group
+│   │   ├── GSI: family-timestamp-index
+│   │   └── GSI: family-updatedAt-index
+│   ├── Users Table
+│   └── InviteCodes Table
+├── Lambda Functions
+│   ├── Alexa Handler
+│   │   ├── Handler Code
+│   │   ├── Environment Variables
+│   │   └── IAM Role
+│   └── Web API Handler
+│       ├── Handler Code
+│       ├── CORS Configuration
+│       └── IAM Role
+└── CloudWatch Log Groups
 ```
 
 ### Lambda Handler Architecture
 ```typescript
 src/
+├── common/
+│   ├── config/
+│   │   └── constants.ts    // Configuration constants (GSI names, etc.)
+│   ├── services/
+│   │   └── user-service.ts // User management (consolidated)
+│   └── types/
+│       └── index.ts        // Common type definitions
 ├── handler.ts              // Main Alexa request handler
-├── services/
-│   ├── memo-service.ts     // DynamoDB operations
-│   └── alexa-service.ts    // Alexa response utilities
-├── types/
-│   ├── alexa-types.ts      // Alexa request/response types
-│   └── memo-types.ts       // Memo data types
-└── utils/
-    ├── logger.ts           // Structured logging
-    └── validators.ts       // Input validation
+├── memo-service.ts         // DynamoDB memo operations
+└── types.ts                // Alexa-specific types
+
+lib/
+├── alexa-voice-memo-stack.ts              // CDK stack definition
+└── alexa-voice-memo-stack.WebApiHandler.ts // Web API Lambda handler
 ```
 
 ## 🔒 Security Architecture
@@ -126,8 +137,9 @@ src/
 ### Authentication & Authorization
 ```yaml
 User Authentication:
-  - Alexa Account Linking: Not required (simple skill)
-  - User Identification: Alexa userId (automatic)
+  - Alexa: userId (automatic from device)
+  - Web: Google OAuth 2.0
+  - User Identification: Unified user management via UserService
 
 Lambda Permissions:
   - DynamoDB: Item-level access only
@@ -135,9 +147,10 @@ Lambda Permissions:
   - No cross-account access
 
 Data Privacy:
-  - User data isolated by userId
-  - No PII storage beyond memo text
+  - Data isolated by familyId (shared within families)
+  - No PII storage beyond memo text and display names
   - Logical deletion (no hard delete)
+  - Family invitation codes expire after 5 minutes
 ```
 
 ### Data Encryption

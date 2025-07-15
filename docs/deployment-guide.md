@@ -1,6 +1,6 @@
 # Alexa Voice Memo - Deployment Guide
 
-*Generated from ideanotes project - 2025-07-12*
+*Updated after refactoring - 2025-07-15*
 
 ## 🎯 Deployment Strategy
 
@@ -33,6 +33,40 @@ Production (prod):
 └── Logs: /aws/lambda/alexa-voice-memo-prod-handler
 ```
 
+## 🛠️ Build Process
+
+### Unified Build System
+After refactoring, the project uses a unified build system that compiles all components:
+
+```bash
+# Build all components (TypeScript + Web API Lambda)
+npm run build:all
+
+# Individual build commands
+npm run build          # TypeScript compilation only
+npm run build:web-api  # Web API Lambda packaging
+
+# Frontend build (environment-specific)
+npm run build:frontend:dev   # Development environment
+npm run build:frontend:stg   # Staging environment
+npm run build:frontend:prod  # Production environment
+```
+
+### Build Output Structure
+```
+dist/
+├── src/                    # Compiled TypeScript files
+│   ├── common/            # Shared services and types
+│   ├── handler.js         # Alexa Lambda handler
+│   └── memo-service.js    # DynamoDB operations
+├── lib/                    # CDK stack files
+└── alexa-voice-memo-stack.WebApiHandler.js  # Web API handler
+
+public/
+└── dist/                   # Built frontend assets
+    └── app.js             # Bundled with environment config
+```
+
 ## 🚀 Deployment Process
 
 ### Phase 1: Development Deployment
@@ -53,22 +87,25 @@ aws cloudformation describe-stacks --stack-name CDKToolkit
 
 #### Initial Deployment
 ```bash
-# 1. Build the project
-npm run build
+# 1. Build all components (TypeScript + Web API)
+npm run build:all
 
 # 2. Run tests
 npm test
 
-# 3. Synthesize CloudFormation
+# 3. Build frontend (environment-specific)
+npm run build:frontend:dev
+
+# 4. Synthesize CloudFormation
 cdk synth alexa-voice-memo-dev
 
-# 4. Review changes
+# 5. Review changes
 cdk diff alexa-voice-memo-dev
 
-# 5. Deploy
+# 6. Deploy
 cdk deploy alexa-voice-memo-dev
 
-# 6. Verify deployment
+# 7. Verify deployment
 aws cloudformation describe-stacks --stack-name alexa-voice-memo-dev
 ```
 

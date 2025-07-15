@@ -130,8 +130,7 @@ function initializeGoogleSignIn() {
 
   try {
     google.accounts.id.initialize({
-      client_id:
-        "940084652550-h58mte04laqb402kfv43ts39tu0n7cgt.apps.googleusercontent.com", // 環境変数からビルド時に置換
+      client_id: "{{GOOGLE_CLIENT_ID}}", // 環境変数からビルド時に置換
       callback: handleGoogleSignIn,
       auto_select: false,
       cancel_on_tap_outside: false,

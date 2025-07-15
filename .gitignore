@@ -162,3 +162,6 @@ build/
 
 # AWS specific
 .aws/
+
+# macOS specific
+.DS_Store

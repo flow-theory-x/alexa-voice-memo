@@ -173,8 +173,8 @@ const table = new Table(this, 'MemosTable', {
 
 // Add GSI
 table.addGlobalSecondaryIndex({
-  indexName: 'timestamp-index',
-  partitionKey: { name: 'userId', type: AttributeType.STRING },
+  indexName: 'family-timestamp-index',
+  partitionKey: { name: 'familyId', type: AttributeType.STRING },
   sortKey: { name: 'timestamp', type: AttributeType.STRING },
 });
 ```

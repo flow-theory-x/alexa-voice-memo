@@ -156,15 +156,15 @@ SSL証明書: CloudFront デフォルト
 
 #### インデックス構成
 ```yaml
-GSI1: timestamp-index
-  - パーティションキー: userId
+GSI1: family-timestamp-index
+  - パーティションキー: familyId
   - ソートキー: timestamp
-  - 用途: 時系列順でのメモ取得
+  - 用途: 家族単位で時系列順でのメモ取得
 
-GSI2: status-index  
-  - パーティションキー: userId
-  - ソートキー: deleted
-  - 用途: アクティブなメモのみの取得
+GSI2: family-updatedAt-index  
+  - パーティションキー: familyId
+  - ソートキー: updatedAt
+  - 用途: 家族単位で更新順でのメモ取得
 ```
 
 #### TTL設定

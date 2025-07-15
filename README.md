@@ -32,17 +32,45 @@
 - **ランタイム**: Lambda Node.js 20.x
 - **開発言語**: TypeScript
 
+## 📋 前提条件
+
+- **Node.js**: v20.x以上
+- **npm**: v10.x以上
+- **AWS CLI**: v2.x（設定済み）
+- **AWS CDK**: v2.x
+- **AWSアカウント**: 管理者権限または以下の権限を持つIAMユーザー
+  - CloudFormation、Lambda、DynamoDB、API Gateway、S3、IAMの作成権限
+
+### 必要なツールのインストール
+```bash
+# AWS CDKのインストール
+npm install -g aws-cdk
+
+# AWS CLIの設定確認
+aws configure list
+
+# 設定されていない場合
+aws configure
+```
+
 ## 🚀 クイックスタート
 
 ### 1. 環境設定
 ```bash
+# リポジトリのクローン
+git clone https://github.com/your-username/alexa-voice-memo.git
+cd alexa-voice-memo
+
+# 依存関係インストール
+npm install
+
 # 環境変数設定
 export CDK_ACCOUNT=your-aws-account-id
 export CDK_REGION=ap-northeast-1
 export CDK_ENV=dev
 
-# 依存関係インストール
-npm install
+# CDK Bootstrap（初回のみ）
+cdk bootstrap aws://${CDK_ACCOUNT}/${CDK_REGION}
 ```
 
 ### 2. Google Sign-In 設定（Web UI用）
@@ -88,14 +116,14 @@ cp .env.example .env.prod
 
 ### 3. デプロイ
 ```bash
-# 依存関係インストール
-npm install
-
-# バックエンドビルド
-npm run build
+# 全コンポーネントのビルド
+npm run build:all
 
 # CDKデプロイ（バックエンド）
 cdk deploy alexa-voice-memo-dev
+
+# デプロイ出力からLambda ARNをコピー
+# 例: arn:aws:lambda:ap-northeast-1:123456789012:function:alexa-voice-memo-dev-handler
 
 # フロントエンドビルド（環境別）
 npm run build:frontend:dev   # 開発環境
@@ -105,6 +133,34 @@ npm run build:frontend:prod  # 本番環境
 # フロントエンドデプロイ（S3）
 npm run deploy:frontend
 ```
+
+### 4. Alexaスキルの設定
+
+#### 4.1 Alexa Developer Consoleでの設定
+1. [Alexa Developer Console](https://developer.amazon.com/alexa/console/ask) にアクセス
+2. **スキルの作成** をクリック
+3. 以下を設定：
+   - スキル名: `ボイスメモ`
+   - デフォルトの言語: `日本語（日本）`
+   - モデルを選択: `カスタム`
+   - ホスティング方法: `ユーザー定義のプロビジョニング`
+4. **スキルを作成** をクリック
+
+#### 4.2 対話モデルの設定
+1. **対話モデル** → **JSONエディター** を開く
+2. `alexa-skills/interaction-model.json` の内容をコピー＆ペースト
+3. **モデルを保存** → **モデルをビルド** をクリック
+
+#### 4.3 エンドポイントの設定
+1. **エンドポイント** を開く
+2. **AWS LambdaのARN** を選択
+3. デフォルトの地域に、CDKデプロイで取得したLambda ARNを入力
+4. **エンドポイントを保存** をクリック
+
+#### 4.4 テスト
+1. **テスト** タブを開く
+2. テスト環境を **開発中** に設定
+3. 「ボイスメモを開いて」と入力してテスト
 
 ### 4. テスト実行
 ```bash
@@ -121,7 +177,12 @@ alexa-voice-memo/
 ├── src/                    # Lambda ソースコード
 │   ├── handler.ts         # Alexaスキルハンドラー
 │   ├── memo-service.ts    # DynamoDB操作
-│   └── types.ts           # 型定義
+│   └── common/            # 共通コード
+│       ├── services/      # 共通サービス
+│       │   └── user-service.ts
+│       ├── types/         # 型定義
+│       └── config/        # 設定
+│           └── constants.ts
 ├── lib/                    # CDK インフラ定義
 │   ├── alexa-voice-memo-stack.ts
 │   └── alexa-voice-memo-stack.WebApiHandler.ts # Web API
@@ -134,12 +195,14 @@ alexa-voice-memo/
 │   ├── build-web-api.js
 │   └── fix-family-integration.js
 ├── test/
+│   ├── memo-service.test.ts
+│   ├── user-service.test.ts
 │   ├── fixtures/          # テスト入力データ
 │   └── responses/         # テスト実行結果
 ├── docs/                   # プロジェクトドキュメント
 │   ├── current-status.md
 │   ├── cdk-specification.md
-│   ├── family-concept-verification.md
+│   ├── refactoring-plan.md
 │   └── lessons-learned/
 │       └── family-sharing-debug.md
 └── bin/                    # CDK エントリーポイント
@@ -148,11 +211,17 @@ alexa-voice-memo/
 
 ## 🛠️ 開発コマンド
 
-### CDK操作
+### ビルドコマンド
 ```bash
 npm run build          # TypeScript コンパイル
+npm run build:all      # 全コンポーネントビルド（Lambda + Web API）
+npm run build:web-api  # Web APIのみビルド
 npm run watch          # ファイル監視モード
 npm test               # Jest テスト実行
+```
+
+### CDK操作
+```bash
 cdk diff               # デプロイ予定変更確認
 cdk deploy             # スタックデプロイ
 cdk destroy            # リソース削除
@@ -189,9 +258,7 @@ aws lambda invoke --function-name alexa-voice-memo-dev-handler \
 ```
 
 ### グローバルセカンダリインデックス
-- **timestamp-index**: 時系列でのメモ取得
-- **status-index**: 削除ステータスでのフィルタリング
-- **family-timestamp-index**: 家族単位でのメモ取得
+- **family-updatedAt-index**: 家族単位での最新メモ取得
 
 ### 家族管理の設計思想
 - **familyId = userId**: 初期状態では自分のIDが家族ID

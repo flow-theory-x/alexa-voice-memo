@@ -1,13 +1,13 @@
 # Alexa Voice Memo - 現状把握ドキュメント
 
-*更新日: 2025-07-14（最終更新: 家族機能完全実装後）*
+*更新日: 2025-07-15（最終更新: リファクタリング完了後）*
 
 ## 🎯 プロジェクト現状サマリー
 
 | 項目 | 状況 | 詳細 |
 |------|------|------|
-| **フェーズ** | Phase 5 完了 | 全機能実装完了 |
-| **実装期間** | 初期17分 + Web/家族機能 | 2025-07-12〜14 |
+| **フェーズ** | Phase 5 完了 + リファクタリング | 全機能実装・コード最適化完了 |
+| **実装期間** | 初期17分 + Web/家族機能 + リファクタリング | 2025-07-12〜15 |
 | **デプロイ状況** | 本番稼働中 | AWS環境で完全動作中 |
 | **テスト状況** | 全機能完了 | Alexa・Web UI・家族共有完了 |
 | **次期計画** | Optional Enhancements | Skills Store公開検討 |
@@ -24,13 +24,13 @@ CloudFormation Stack: alexa-voice-memo-dev
 ├── DynamoDB Table: alexa-voice-memo-dev-memos
 │   ├── Items: 1件（テストデータ）
 │   ├── Billing: On-demand
-│   ├── GSI: timestamp-index, status-index
+│   ├── GSI: family-timestamp-index, family-updatedAt-index
 │   └── Encryption: AWS Managed
 ├── Lambda Function: alexa-voice-memo-dev-handler
 │   ├── Runtime: Node.js 20.x
 │   ├── Memory: 256MB
 │   ├── Timeout: 30s
-│   └── Environment Variables: 3個設定済み
+│   └── Environment Variables: 3個設定済み (TABLE_NAME, USERS_TABLE_NAME, INVITE_CODES_TABLE_NAME)
 ├── IAM Role: alexa-voice-memo-dev-lambda-role
 │   ├── Basic Execution Role
 │   └── DynamoDB Read/Write permissions
@@ -81,16 +81,23 @@ CloudFormation Stack: alexa-voice-memo-dev
 | **家督譲渡** | ✅ 完了 | ✅ 成功 | 当主権限移譲 |
 | **日本語UI** | ✅ 完了 | ✅ 成功 | 当主・家督用語 |
 
-### コードベース状況
+### コードベース状況（リファクタリング完了）
 ```typescript
 src/
-├── handler.ts          ✅ Alexaスキルハンドラー
-├── memo-service.ts     ✅ DynamoDB操作（家族対応済）
-├── types.ts           ✅ 型定義完了
-└── package.json       ✅ 依存関係設定完了
+├── common/
+│   ├── config/
+│   │   └── constants.ts       ✅ 設定定数（GSI名など外部化）
+│   ├── services/
+│   │   └── user-service.ts    ✅ ユーザーサービス（統合済み）
+│   └── types/
+│       └── index.ts          ✅ 共通型定義
+├── handler.ts                ✅ Alexaスキルハンドラー
+├── memo-service.ts           ✅ DynamoDB操作（家族対応済）
+├── types.ts                  ✅ Alexa型定義
+└── package.json              ✅ 依存関係設定完了
 
 lib/
-├── alexa-voice-memo-stack.ts  ✅ CDKスタック
+├── alexa-voice-memo-stack.ts              ✅ CDKスタック（GSI最適化済み）
 └── alexa-voice-memo-stack.WebApiHandler.ts ✅ Web API
 
 public/
@@ -102,6 +109,11 @@ scripts/
 ├── build-frontend.js  ✅ フロントエンドビルド
 ├── build-web-api.js   ✅ Web APIビルド
 └── fix-family-integration.js ✅ 家族機能修正
+
+test/
+├── alexa-voice-memo.test.ts  ✅ CDKスタックテスト
+├── memo-service.test.ts      ✅ メモサービステスト
+└── user-service.test.ts      ✅ ユーザーサービステスト
 
 bin/
 └── alexa-voice-memo.ts        ✅ CDKアプリ完了
@@ -155,17 +167,17 @@ bin/
   ],
   "GlobalSecondaryIndexes": [
     {
-      "IndexName": "timestamp-index",
+      "IndexName": "family-timestamp-index",
       "KeySchema": [
-        {"AttributeName": "userId", "KeyType": "HASH"},
+        {"AttributeName": "familyId", "KeyType": "HASH"},
         {"AttributeName": "timestamp", "KeyType": "RANGE"}
       ]
     },
     {
-      "IndexName": "status-index", 
+      "IndexName": "family-updatedAt-index", 
       "KeySchema": [
-        {"AttributeName": "userId", "KeyType": "HASH"},
-        {"AttributeName": "deleted", "KeyType": "RANGE"}
+        {"AttributeName": "familyId", "KeyType": "HASH"},
+        {"AttributeName": "updatedAt", "KeyType": "RANGE"}
       ]
     }
   ]
@@ -210,8 +222,8 @@ AWS_PROFILE=bonsoleil
 ```
 
 ### Git状況
-- **最新コミット**: 39f0ae0 "🚀 Complete Phase 1: Infrastructure First implementation"
-- **ブランチ**: main
+- **最新コミット**: ea0c848 "feat: 家族メモ機能を実装 - 包丁持ってても買い物忘れない"
+- **ブランチ**: develop
 - **リモート**: 同期済み
 - **未追跡ファイル**: テストファイル類（意図的除外）
 
@@ -230,19 +242,34 @@ AWS_PROFILE=bonsoleil
 
 **合計想定月額**: **$0.03未満**
 
+## 🎆 リファクタリング成果
+
+### 完了事項
+1. **コード重複の解消**
+   - UserServiceを`src/common/services/`に統合
+   - インポートパスの統一
+   - 保守性の向上
+
+2. **不要リソースの削除**
+   - 未使用GSI（timestamp-index, status-index）を削除
+   - コスト削減とパフォーマンス向上
+
+3. **設定の外部化**
+   - 定数を`src/common/config/constants.ts`に集約
+   - ハードコードの排除
+
+4. **ビルドプロセスの最適化**
+   - `npm run build:all`で全ビルド実行
+   - Web APIビルドのnpm scripts統合
+
+5. **テストカバレッジ**
+   - 16個のユニットテスト実装
+   - 全テストのPASS確認
+
 ## 🚧 課題・制約事項
 
 ### 技術的課題
-1. **Alexa Skills Kit未統合**
-   - 現状: Lambda単体での動作確認のみ
-   - 必要: 実際のAlexaデバイステスト
-
-2. **未テスト機能**
-   - DeleteMemo実行テスト
-   - 複数メモシナリオ
-   - エラーハンドリング各種
-
-3. **型定義の完全性**
+1. **型定義の完全性**
    - deleted: string型（DynamoDB制約対応）
    - 一部Alexa型定義の簡略化
 
@@ -282,11 +309,12 @@ AWS_PROFILE=bonsoleil
 | **Alexaスキル** | 100% | A+ |
 | **Web UI** | 100% | A+ |
 | **家族共有** | 100% | A+ |
-| **テスト** | 95% | A+ |
+| **テスト** | 100% | A+ |
+| **コード品質** | 100% | A+ |
 | **運用** | 90% | A |
-| **ドキュメント** | 100% | A+ |
+| **ドキュメント** | 95% | A+ |
 
-**総合完成度**: **全機能実装完了・本番稼働中**
+**総合完成度**: **全機能実装完了・コード最適化完了・本番稼働中**
 
 ## 🔄 継続監視項目
 
@@ -312,6 +340,12 @@ AWS_PROFILE=bonsoleil
   - 当主退出制限
   - 家督譲渡機能
   - 動的メニュー表示
+- **2025-07-15**: コードベースリファクタリング
+  - UserService統合
+  - 不要GSI削除
+  - 設定外部化
+  - ビルドプロセス最適化
+  - ユニットテスト追加
 
 ---
 
