@@ -169,7 +169,7 @@ function handleGoogleSignIn(response) {
     }
 
     const credential = response.credential;
-    
+
     // JWTトークンの形式を確認（3つのパートに分かれているか）
     const parts = credential.split(".");
     if (parts.length !== 3) {
@@ -182,17 +182,17 @@ function handleGoogleSignIn(response) {
     let payload;
     try {
       // URL-safe Base64をstandard Base64に変換してからデコード
-      let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-      
+      let base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+
       // パディングを追加（必要な場合）
       const pad = base64.length % 4;
       if (pad) {
         if (pad === 1) {
-          throw new Error('Invalid base64 string');
+          throw new Error("Invalid base64 string");
         }
-        base64 += new Array(5 - pad).join('=');
+        base64 += new Array(5 - pad).join("=");
       }
-      
+
       const jsonPayload = atob(base64);
       payload = JSON.parse(jsonPayload);
     } catch (decodeError) {
@@ -312,7 +312,7 @@ function createFullTextDialog() {
   // コンテンツ
   fullTextContent = document.createElement("div");
   fullTextContent.className = "full-text-content";
-  
+
   // メタデータ（作成日時と作成者）
   fullTextMetadata = document.createElement("div");
   fullTextMetadata.className = "full-text-metadata";
@@ -328,12 +328,12 @@ function createFullTextDialog() {
 // 全文表示ダイアログを表示
 function showFullTextDialog(memo) {
   fullTextContent.textContent = memo.content;
-  
+
   // メタデータを設定
   const timestamp = formatTimestamp(memo.timestamp);
-  const creator = memo.createdByName ? `by ${memo.createdByName}` : '';
+  const creator = memo.createdByName ? `by ${memo.createdByName}` : "";
   fullTextMetadata.textContent = `${timestamp} ${creator}`;
-  
+
   fullTextOverlay.style.display = "block";
   fullTextDialog.classList.add("show");
 }
@@ -1331,8 +1331,9 @@ function initializeVersion() {
   const mm = String(now.getMonth() + 1).padStart(2, "0");
   const dd = String(now.getDate()).padStart(2, "0");
   const hh = String(now.getHours()).padStart(2, "0");
+  const min = String(now.getMinutes()).padStart(2, "0");
 
-  versionText.textContent = `build:${yy}${mm}${dd}${hh}`;
+  versionText.textContent = `build:${yy}${mm}${dd}${hh}${min}`;
 }
 
 // 招待コード生成

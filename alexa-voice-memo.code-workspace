@@ -29,7 +29,6 @@
     "search.exclude": {
       "**/node_modules": true,
       "**/cdk.out": true,
-      "**/*.js": true,
       "**/*.d.ts": true
     },
     "files.associations": {

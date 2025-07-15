@@ -32,9 +32,15 @@ CDK_ACCOUNT=498997347996
 CDK_REGION=ap-northeast-1
 CDK_ENV=dev
 
-# Future environments (when needed)
-# .env.stg - staging configuration
-# .env.prod - production configuration
+# Web UI環境変数 (.env.dev, .env.stg, .env.prod)
+GOOGLE_CLIENT_ID_DEV=940084652550-h58mte04laqb402kfv43ts39tu0n7cgt.apps.googleusercontent.com
+GOOGLE_CLIENT_ID_STG=your-staging-client-id
+GOOGLE_CLIENT_ID_PROD=your-production-client-id
+
+# Lambda環境変数（CDKで自動設定）
+MEMO_TABLE_NAME=alexa-voice-memo-${CDK_ENV}-memos
+USER_TABLE_NAME=alexa-voice-memo-${CDK_ENV}-users
+INVITE_CODE_TABLE_NAME=alexa-voice-memo-${CDK_ENV}-invite-codes
 ```
 
 ### Alexa Skills Configuration
@@ -85,6 +91,20 @@ Branches → Environments:
 - ✅ **Development Deployment**: `develop` branch → auto deploy to dev
 - ⏸️ **Staging Deployment**: Ready but not needed yet
 - ⏸️ **Production Deployment**: Ready but not needed yet
+
+### Google OAuth Setup
+```
+Google Cloud Console:
+1. APIs & Services > Credentials
+2. Create OAuth 2.0 Client ID
+3. Application type: Web application
+4. Authorized JavaScript origins:
+   - Dev: http://localhost:8080
+   - Dev: http://alexa-voice-memo-dev-frontend.s3-website-ap-northeast-1.amazonaws.com
+   - Staging: http://alexa-voice-memo-stg-frontend.s3-website-ap-northeast-1.amazonaws.com
+   - Prod: https://your-custom-domain.com
+5. Copy Client ID to appropriate .env file
+```
 
 ## 📊 When to Scale Environments
 
