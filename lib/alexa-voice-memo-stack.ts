@@ -52,9 +52,9 @@ export class AlexaVoiceMemoStack extends cdk.Stack {
 
     // Global Secondary Index for family-based queries
     this.memoTable.addGlobalSecondaryIndex({
-      indexName: 'family-timestamp-index',
+      indexName: 'family-updatedAt-index',
       partitionKey: { name: 'familyId', type: dynamodb.AttributeType.STRING },
-      sortKey: { name: 'timestamp', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'updatedAt', type: dynamodb.AttributeType.STRING },
     });
 
     // DynamoDB Table for Users

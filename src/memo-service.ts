@@ -88,7 +88,7 @@ export class MemoService {
     
     const command = new QueryCommand({
       TableName: this.tableName,
-      IndexName: 'family-timestamp-index',
+      IndexName: 'family-updatedAt-index',
       KeyConditionExpression: 'familyId = :familyId',
       FilterExpression: 'deleted = :deleted',
       ExpressionAttributeValues: {

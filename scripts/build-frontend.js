@@ -32,8 +32,41 @@ if (!googleClientId) {
   process.exit(1);
 }
 
+// ビルド時刻を生成（YYMMDDHHMM形式）
+const now = new Date();
+const yy = String(now.getFullYear()).slice(-2);
+const mm = String(now.getMonth() + 1).padStart(2, '0');
+const dd = String(now.getDate()).padStart(2, '0');
+const hh = String(now.getHours()).padStart(2, '0');
+const min = String(now.getMinutes()).padStart(2, '0');
+const buildTime = `${yy}${mm}${dd}${hh}${min}`;
+
+// API URLを取得（CloudFormationから）
+const { execSync } = require('child_process');
+let apiUrl;
+try {
+  apiUrl = execSync(
+    `aws cloudformation describe-stacks --stack-name alexa-voice-memo-${env} --query 'Stacks[0].Outputs[?OutputKey==\`WebApiUrl\`].OutputValue' --output text`,
+    { encoding: 'utf8' }
+  ).trim();
+  // 末尾のスラッシュを削除
+  apiUrl = apiUrl.replace(/\/$/, '');
+} catch (error) {
+  console.error('Error fetching API URL from CloudFormation:', error.message);
+  // フォールバック
+  apiUrl = `https://example.execute-api.ap-northeast-1.amazonaws.com/${env}`;
+}
+
 // テンプレート置換
-const appJsContent = appJsTemplate.replace('{{GOOGLE_CLIENT_ID}}', googleClientId);
+const appJsContent = appJsTemplate
+  .replace('{{GOOGLE_CLIENT_ID}}', googleClientId)
+  .replace('{{API_BASE_URL}}', apiUrl);
+
+// HTMLにビルド時刻を埋め込む
+const indexHtmlContent = indexHtmlTemplate.replace(
+  '<html lang="ja">',
+  `<html lang="ja" data-build-time="${buildTime}">`
+);
 
 // ビルド出力ディレクトリを作成
 const buildDir = 'build/frontend';
@@ -43,9 +76,11 @@ if (!fs.existsSync(buildDir)) {
 
 // ファイルを出力
 fs.writeFileSync(path.join(buildDir, 'app.js'), appJsContent);
-fs.writeFileSync(path.join(buildDir, 'index.html'), indexHtmlTemplate);
+fs.writeFileSync(path.join(buildDir, 'index.html'), indexHtmlContent);
 fs.writeFileSync(path.join(buildDir, 'style.css'), fs.readFileSync('public/style.css', 'utf8'));
 
 console.log(`✅ Frontend built successfully to ${buildDir}/`);
 console.log(`   Environment: ${env}`);
+console.log(`   API URL: ${apiUrl}`);
 console.log(`   Google Client ID: ${googleClientId.substring(0, 20)}...`);
+console.log(`   Build Time: ${buildTime}`);

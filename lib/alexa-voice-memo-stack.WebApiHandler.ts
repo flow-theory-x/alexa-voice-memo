@@ -79,6 +79,7 @@ async function verifyGoogleToken(req: any, res: any, next: any) {
     // ユーザー情報をリクエストに追加
     req.user = {
       userId: payload.sub,
+      sub: payload.sub,  // updateメソッドで使用するため追加
       email: payload.email,
       name: payload.name,
     };
@@ -130,12 +131,12 @@ app.get("/api/memos", verifyGoogleToken, async (req: any, res) => {
     // familyIdでメモを取得（GSIを使用）
     const command = new QueryCommand({
       TableName: tableName,
-      IndexName: "family-timestamp-index",
+      IndexName: "family-updatedAt-index",
       KeyConditionExpression: "familyId = :familyId",
       ExpressionAttributeValues: {
         ":familyId": familyId,
       },
-      ScanIndexForward: false,
+      ScanIndexForward: false, // 降順（新しい順）
       Limit: 200,
     });
 
@@ -200,16 +201,10 @@ app.get("/api/memos", verifyGoogleToken, async (req: any, res) => {
         deleted: item.deleted === "true",
         createdByName: userMap.get(item.userId) || "Unknown",
         familyId: item.familyId,
-      }))
-      .sort((a, b) => {
-        // まず削除フラグでソート（削除されていないものが上）
-        if (a.deleted !== b.deleted) {
-          return a.deleted ? 1 : -1;
-        }
-        // 同じ削除状態なら新しい順にソート
-        return b.timestamp.localeCompare(a.timestamp);
-      })
-      .slice(0, 100); // 最大100件
+        updatedAt: item.updatedAt,
+        updatedBy: item.updatedBy,
+      }));
+      // DynamoDBのGSIで既にupdatedAtでソート済み
 
     console.log(`Returning ${memos.length} memos to client`);
     res.json(memos);
@@ -249,6 +244,7 @@ app.post("/api/memos", verifyGoogleToken, async (req: any, res) => {
         timestamp,
         deleted: "false",
         updatedAt: timestamp,
+        updatedBy: userId,
         familyId,
       },
     });
@@ -341,6 +337,8 @@ app.put("/api/memos/:id", verifyGoogleToken, async (req: any, res) => {
     });
 
     const scanResult = await docClient.send(scanCommand);
+    console.log(`Scan result for memo ${id}:`, JSON.stringify(scanResult, null, 2));
+    
     if (!scanResult.Items || scanResult.Items.length === 0) {
       res.status(404).json({ error: "Memo not found" });
       return;
@@ -348,27 +346,38 @@ app.put("/api/memos/:id", verifyGoogleToken, async (req: any, res) => {
 
     // メモを更新
     const memo = scanResult.Items[0];
+    console.log(`Updating memo with key:`, { userId: memo.userId, memoId: id });
+    console.log(`Current user:`, req.user);
+    
+    if (!req.user || !req.user.sub) {
+      console.error("User information not found in request");
+      res.status(401).json({ error: "User not authenticated" });
+      return;
+    }
+    
     const updateCommand = new UpdateCommand({
       TableName: tableName,
       Key: {
         userId: memo.userId,
         memoId: id,
       },
-      UpdateExpression: "SET #text = :content, updatedAt = :updatedAt",
+      UpdateExpression: "SET #text = :content, updatedAt = :updatedAt, updatedBy = :updatedBy",
       ExpressionAttributeNames: {
         "#text": "text",
       },
       ExpressionAttributeValues: {
         ":content": content,
         ":updatedAt": new Date().toISOString(),
+        ":updatedBy": req.user.sub,
       },
     });
 
     await docClient.send(updateCommand);
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating memo:", error);
-    res.status(500).json({ error: "Internal server error" });
+    console.error("Error details:", error.message);
+    res.status(500).json({ error: error.message || "Internal server error" });
   }
 });
 

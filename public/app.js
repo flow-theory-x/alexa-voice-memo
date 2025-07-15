@@ -1,6 +1,5 @@
 // API設定
-const API_BASE_URL =
-  "https://99nb4tfwu6.execute-api.ap-northeast-1.amazonaws.com/dev";
+const API_BASE_URL = "{{API_BASE_URL}}";
 
 // 状態管理
 let memos = [];
@@ -330,9 +329,24 @@ function showFullTextDialog(memo) {
   fullTextContent.textContent = memo.content;
 
   // メタデータを設定
-  const timestamp = formatTimestamp(memo.timestamp);
+  const createdAt = formatDetailedTimestamp(memo.timestamp);
   const creator = memo.createdByName ? `by ${memo.createdByName}` : "";
-  fullTextMetadata.textContent = `${timestamp} ${creator}`;
+  
+  let metadataText = `作成: ${createdAt} ${creator}`;
+  
+  // 更新情報を追加（userIdと異なる場合のみ）
+  if (memo.updatedBy && memo.updatedBy !== memo.userId) {
+    const updatedAt = formatDetailedTimestamp(memo.updatedAt);
+    const updater = familyMembers.find(member => member.userId === memo.updatedBy);
+    const updaterName = updater ? updater.name : "";
+    
+    if (updaterName) {
+      metadataText += `\n更新: ${updatedAt} by ${updaterName}`;
+    }
+  }
+  
+  fullTextMetadata.textContent = metadataText;
+  fullTextMetadata.style.whiteSpace = "pre-line"; // 改行を有効にする
 
   fullTextOverlay.style.display = "block";
   fullTextDialog.classList.add("show");
@@ -660,7 +674,7 @@ function setupPullToRefresh() {
       startY = e.touches[0].clientY;
       pulling = true;
     }
-  });
+  }, { passive: true });
 
   document.addEventListener("touchmove", (e) => {
     if (!pulling) return;
@@ -676,7 +690,7 @@ function setupPullToRefresh() {
         pullToRefresh.classList.add("visible");
       }
     }
-  });
+  }, { passive: false }); // preventDefaultを使うため、passiveはfalse
 
   document.addEventListener("touchend", async () => {
     if (!pulling) return;
@@ -777,7 +791,9 @@ function createMemoElement(memo) {
 
   const timestamp = document.createElement("div");
   timestamp.className = "memo-timestamp";
-  timestamp.textContent = formatTimestamp(memo.timestamp);
+  // updatedAtがない場合はtimestampを使用
+  const displayTime = memo.updatedAt || memo.timestamp;
+  timestamp.textContent = formatTimestamp(displayTime);
 
   const deleteBtn = document.createElement("button");
   deleteBtn.className = "delete-btn";
@@ -803,10 +819,18 @@ function createMemoElement(memo) {
   metadata.className = "memo-metadata";
   metadata.appendChild(timestamp);
 
-  // 作成者表示を追加
-  if (memo.createdByName) {
-    const creator = document.createElement("div");
-    creator.className = "memo-creator";
+  // 作成者表示を追加（updatedByがあればそれを、なければcreatedByNameを使用）
+  const creator = document.createElement("div");
+  creator.className = "memo-creator";
+  
+  if (memo.updatedBy) {
+    const updater = familyMembers.find(member => member.userId === memo.updatedBy);
+    const updaterName = updater ? updater.name : "";
+    if (updaterName) {
+      creator.textContent = `by ${updaterName}`;
+      metadata.appendChild(creator);
+    }
+  } else if (memo.createdByName) {
     creator.textContent = `by ${memo.createdByName}`;
     metadata.appendChild(creator);
   }
@@ -825,17 +849,21 @@ function setupSwipeToDelete(element, memoId, isDeleted) {
   let startX = 0;
   let currentX = 0;
   let swiping = false;
+  let moved = false;
 
   element.addEventListener("touchstart", (e) => {
     startX = e.touches[0].clientX;
+    currentX = startX; // 初期値を設定
     swiping = true;
+    moved = false;
     element.classList.add("swiping");
-  });
+  }, { passive: true });
 
   element.addEventListener("touchmove", (e) => {
     if (!swiping) return;
 
     currentX = e.touches[0].clientX;
+    moved = true; // 移動があったことを記録
     const diffX = currentX - startX;
 
     // 両方向のスワイプを許可
@@ -846,13 +874,19 @@ function setupSwipeToDelete(element, memoId, isDeleted) {
       // 右スワイプ
       element.style.transform = `translateX(${diffX}px)`;
     }
-  });
+  }, { passive: true });
 
   element.addEventListener("touchend", () => {
     if (!swiping) return;
 
     swiping = false;
     element.classList.remove("swiping");
+
+    // 移動がなかった場合（シングルタップ）は何もしない
+    if (!moved) {
+      element.style.transform = "";
+      return;
+    }
 
     const diffX = currentX - startX;
 
@@ -978,10 +1012,22 @@ async function editMemo(memoId) {
       body: JSON.stringify({ content: newContent }),
     });
 
-    if (!response.ok) throw new Error("Failed to update memo");
+    if (!response.ok) {
+      console.error("Update memo failed with status:", response.status);
+      let errorData;
+      try {
+        errorData = await response.json();
+        console.error("Update memo error response:", errorData);
+      } catch (e) {
+        console.error("Failed to parse error response");
+      }
+      throw new Error(errorData?.error || `Failed to update memo (${response.status})`);
+    }
 
     // 成功したら更新
     memo.content = newContent;
+    memo.updatedAt = new Date().toISOString();
+    memo.updatedBy = currentUserId;
     renderMemos();
   } catch (err) {
     console.error("Error updating memo:", err);
@@ -1070,6 +1116,19 @@ async function permanentDeleteAllMemos() {
     console.error("Error permanently deleting memos:", err);
     alert("完全削除に失敗しました");
   }
+}
+
+// 詳細なタイムスタンプフォーマット（YY/MM/DD HH:MM:SS）
+function formatDetailedTimestamp(timestamp) {
+  const date = new Date(timestamp);
+  const yy = String(date.getFullYear()).slice(-2);
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const hh = String(date.getHours()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
+  const ss = String(date.getSeconds()).padStart(2, "0");
+  
+  return `${yy}/${mm}/${dd} ${hh}:${min}:${ss}`;
 }
 
 // タイムスタンプフォーマット
@@ -1325,15 +1384,14 @@ function updateMenuVisibility() {
 
 // バージョン情報を初期化
 function initializeVersion() {
-  // YYMMDDSS形式でバージョン表示
-  const now = new Date();
-  const yy = String(now.getFullYear()).slice(-2);
-  const mm = String(now.getMonth() + 1).padStart(2, "0");
-  const dd = String(now.getDate()).padStart(2, "0");
-  const hh = String(now.getHours()).padStart(2, "0");
-  const min = String(now.getMinutes()).padStart(2, "0");
-
-  versionText.textContent = `build:${yy}${mm}${dd}${hh}${min}`;
+  // ビルド時刻はindex.htmlのdata属性から取得
+  const buildTime = document.documentElement.getAttribute('data-build-time');
+  if (buildTime) {
+    versionText.textContent = `build:${buildTime}`;
+  } else {
+    // フォールバック: ビルド時刻が設定されていない場合
+    versionText.textContent = `v1.0.3`;
+  }
 }
 
 // 招待コード生成

@@ -50,7 +50,7 @@ async function handleIntent(
 
     case "DeleteAllMemosIntent":
       return await handleDeleteAllMemos(event, userId);
-      
+
     case "JoinFamilyIntent":
       return await handleJoinFamily(event, userId);
 
@@ -62,7 +62,7 @@ async function handleIntent(
 
     case "AMAZON.HelpIntent":
       return buildResponse(
-        "ボイスメモでは、メモの追加、読み上げ、削除ができます。例えば「牛乳を買うをメモに追加」や「メモを読んで」と言ってください。家族と共有するには「招待コード〇〇で参加」と言ってください。",
+        "ボイスメモでは、メモの追加、読み上げ、削除ができます。例えば「牛乳を追加」や「一覧」と言ってください。削除は番号で「1番を削除」と指定してください。",
         false
       );
 
@@ -221,16 +221,29 @@ async function handleJoinFamily(
     const inviteCode = event.request.intent?.slots?.inviteCode?.value;
 
     if (!inviteCode) {
-      return buildResponse("招待コードが聞き取れませんでした。もう一度お願いします。", false);
+      return buildResponse(
+        "招待コードが聞き取れませんでした。もう一度お願いします。",
+        false
+      );
     }
 
     // Join family using invite code
-    const result = await memoService.joinFamilyByInviteCode(userId, inviteCode, "Alexa");
-    
+    const result = await memoService.joinFamilyByInviteCode(
+      userId,
+      inviteCode,
+      "Alexa"
+    );
+
     if (result.success) {
-      return buildResponse("家族に参加しました。これからはメモを共有できます。", false);
+      return buildResponse(
+        "家族に参加しました。これからはメモを共有できます。",
+        false
+      );
     } else {
-      return buildResponse("無効な招待コードです。正しいコードを確認してください。", false);
+      return buildResponse(
+        "無効な招待コードです。正しいコードを確認してください。",
+        false
+      );
     }
   } catch (error) {
     console.error("Join family error:", error);
@@ -263,7 +276,7 @@ function buildResponse(
   // Add LinkAccount card if needed
   if (linkAccountCard) {
     response.response.card = {
-      type: "LinkAccount"
+      type: "LinkAccount",
     };
   }
 
