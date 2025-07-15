@@ -17,18 +17,40 @@ if (!fs.existsSync(webApiDistDir)) {
   fs.mkdirSync(webApiDistDir, { recursive: true });
 }
 
-// Compile TypeScript to JavaScript
-console.log('Compiling TypeScript...');
-execSync(`npx tsc ${webApiTsFile} --outDir ${webApiDistDir} --module commonjs --target es2020 --skipLibCheck --esModuleInterop`, {
+// First, compile all TypeScript files
+console.log('Compiling all TypeScript...');
+execSync('npx tsc', {
   cwd: projectRoot,
   stdio: 'inherit'
 });
 
-// Rename the output file to index.js
-const compiledFile = path.join(webApiDistDir, 'alexa-voice-memo-stack.WebApiHandler.js');
+// Copy the compiled file to index.js
+const compiledFile = path.join(projectRoot, 'dist', 'lib', 'alexa-voice-memo-stack.WebApiHandler.js');
 if (fs.existsSync(compiledFile)) {
-  fs.renameSync(compiledFile, webApiJsFile);
-  console.log('Renamed to index.js');
+  // Read the file content
+  let content = fs.readFileSync(compiledFile, 'utf8');
+  
+  // Fix the import paths
+  content = content.replace(/require\("\.\.\/src\//g, 'require("./src/');
+  
+  // Write to index.js
+  fs.writeFileSync(webApiJsFile, content);
+  console.log('Created index.js with fixed paths');
+} else {
+  throw new Error(`Compiled file not found: ${compiledFile}`);
+}
+
+// Copy dependencies
+console.log('Copying dependencies...');
+const srcDir = path.join(projectRoot, 'dist', 'src');
+const webApiSrcDir = path.join(webApiDistDir, 'src');
+
+if (fs.existsSync(srcDir)) {
+  execSync(`cp -r ${srcDir} ${webApiSrcDir}`, {
+    cwd: projectRoot,
+    stdio: 'inherit'
+  });
+  console.log('Copied src directory');
 }
 
 // Create package.json for Lambda
