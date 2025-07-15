@@ -6,6 +6,8 @@
   },
   "scripts": {
     "build": "tsc",
+    "build:all": "npm run build && npm run build:web-api",
+    "build:web-api": "node scripts/build-web-api.js",
     "build:frontend": "node scripts/build-frontend.js",
     "build:frontend:dev": "node scripts/build-frontend.js --env=dev",
     "build:frontend:stg": "node scripts/build-frontend.js --env=stg", 

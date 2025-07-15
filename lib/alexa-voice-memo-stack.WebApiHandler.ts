@@ -92,7 +92,7 @@ async function verifyGoogleToken(req: any, res: any, next: any) {
 }
 
 // UserService import
-import { UserService } from "./alexa-voice-memo-stack.UserService";
+import { UserService } from "../src/common/services/user-service";
 
 // DynamoDB設定
 const client = new DynamoDBClient({
@@ -131,7 +131,7 @@ app.get("/api/memos", verifyGoogleToken, async (req: any, res) => {
     // familyIdでメモを取得（GSIを使用）
     const command = new QueryCommand({
       TableName: tableName,
-      IndexName: "family-updatedAt-index",
+      IndexName: "family-updatedAt-index", // TODO: Use constant from common/config
       KeyConditionExpression: "familyId = :familyId",
       ExpressionAttributeValues: {
         ":familyId": familyId,

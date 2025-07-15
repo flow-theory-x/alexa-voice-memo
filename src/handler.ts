@@ -1,5 +1,5 @@
 import { MemoService } from "./memo-service";
-import { AlexaRequest, AlexaResponse } from "./types";
+import { AlexaRequest, AlexaResponse } from "./common/types";
 
 const memoService = new MemoService();
 

@@ -1,5 +1,6 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand, GetCommand, UpdateCommand, DeleteCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
+import { AWS_REGION, TABLE_NAMES } from '../config/constants';
 
 export interface User {
   userId: string;
@@ -15,9 +16,9 @@ export class UserService {
   private tableName: string;
 
   constructor() {
-    const client = new DynamoDBClient({ region: process.env.AWS_REGION || 'ap-northeast-1' });
+    const client = new DynamoDBClient({ region: AWS_REGION });
     this.docClient = DynamoDBDocumentClient.from(client);
-    this.tableName = process.env.USER_TABLE_NAME!;
+    this.tableName = TABLE_NAMES.USER;
   }
 
   async getUser(userId: string): Promise<User | null> {

@@ -36,20 +36,6 @@ export class AlexaVoiceMemoStack extends cdk.Stack {
         : cdk.RemovalPolicy.DESTROY,
     });
 
-    // Global Secondary Index for timestamp-based queries
-    this.memoTable.addGlobalSecondaryIndex({
-      indexName: 'timestamp-index',
-      partitionKey: { name: 'userId', type: dynamodb.AttributeType.STRING },
-      sortKey: { name: 'timestamp', type: dynamodb.AttributeType.STRING },
-    });
-
-    // Global Secondary Index for status-based queries
-    this.memoTable.addGlobalSecondaryIndex({
-      indexName: 'status-index',
-      partitionKey: { name: 'userId', type: dynamodb.AttributeType.STRING },
-      sortKey: { name: 'deleted', type: dynamodb.AttributeType.STRING },
-    });
-
     // Global Secondary Index for family-based queries
     this.memoTable.addGlobalSecondaryIndex({
       indexName: 'family-updatedAt-index',

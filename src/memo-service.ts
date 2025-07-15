@@ -1,8 +1,9 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand, QueryCommand, UpdateCommand, BatchWriteCommand, ScanCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
-import { MemoItem } from './types';
+import { MemoItem } from './common/types';
 import { createHash } from 'crypto';
-import { UserService } from './user-service';
+import { UserService } from './common/services/user-service';
+import { AWS_REGION, TABLE_NAMES, GSI_NAMES, INVITE_CODE_TTL } from './common/config/constants';
 
 export class MemoService {
   private docClient: DynamoDBDocumentClient;
@@ -11,10 +12,10 @@ export class MemoService {
   private userService: UserService;
 
   constructor() {
-    const client = new DynamoDBClient({ region: process.env.AWS_REGION || 'ap-northeast-1' });
+    const client = new DynamoDBClient({ region: AWS_REGION });
     this.docClient = DynamoDBDocumentClient.from(client);
-    this.tableName = process.env.MEMO_TABLE_NAME!;
-    this.inviteCodeTableName = process.env.INVITE_CODE_TABLE_NAME || 'alexa-voice-memo-dev-invite-codes';
+    this.tableName = TABLE_NAMES.MEMO;
+    this.inviteCodeTableName = TABLE_NAMES.INVITE_CODE;
     this.userService = new UserService();
   }
 
@@ -88,7 +89,7 @@ export class MemoService {
     
     const command = new QueryCommand({
       TableName: this.tableName,
-      IndexName: 'family-updatedAt-index',
+      IndexName: GSI_NAMES.FAMILY_UPDATED_AT,
       KeyConditionExpression: 'familyId = :familyId',
       FilterExpression: 'deleted = :deleted',
       ExpressionAttributeValues: {
