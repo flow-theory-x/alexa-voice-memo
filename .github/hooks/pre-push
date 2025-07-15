@@ -9,10 +9,11 @@ if echo "$changed_files" | grep -E "(\.github/workflows/|deploy|ci|cd)" > /dev/n
     echo "🚨 CI/CD関連の変更を検出しました"
     echo ""
     echo "📋 デプロイ前チェックリスト:"
-    echo "  □ ローカルでビルド確認した (npm run build && cdk synth)"
+    echo "  □ ローカルでビルド確認した (npm run build && npm run build:web-api)"
     echo "  □ 新しいコマンドをローカルで実行した"
     echo "  □ 環境変数/シークレットを設定した"
     echo "  □ エラーハンドリングを考慮した"
+    echo "  □ GitHubワークフローのビルドスクリプトとローカルが一致している"
     echo ""
     echo "上記を全て確認しましたか？ (yes/no)"
     read -r response < /dev/tty
