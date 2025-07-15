@@ -160,23 +160,65 @@ function initializeGoogleSignIn() {
 
 // Googleログイン処理
 function handleGoogleSignIn(response) {
-  // JWTトークンをデコード
-  const credential = response.credential;
-  const payload = JSON.parse(atob(credential.split(".")[1]));
+  try {
+    // レスポンスとcredentialの検証
+    if (!response || !response.credential) {
+      console.error("Invalid response:", response);
+      alert("ログインに失敗しました。もう一度お試しください。");
+      return;
+    }
 
-  // ユーザー情報を取得
-  currentUserId = payload.sub; // Google ID
-  currentUserName = payload.name || payload.email.split("@")[0];
+    const credential = response.credential;
+    
+    // JWTトークンの形式を確認（3つのパートに分かれているか）
+    const parts = credential.split(".");
+    if (parts.length !== 3) {
+      console.error("Invalid JWT format:", credential);
+      alert("認証トークンの形式が正しくありません。");
+      return;
+    }
 
-  // JWTトークンをローカルストレージに保存（userIdは保存しない）
-  localStorage.setItem("googleToken", credential);
-  localStorage.setItem("userName", currentUserName);
+    // Base64デコードを試みる
+    let payload;
+    try {
+      // URL-safe Base64をstandard Base64に変換してからデコード
+      let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      
+      // パディングを追加（必要な場合）
+      const pad = base64.length % 4;
+      if (pad) {
+        if (pad === 1) {
+          throw new Error('Invalid base64 string');
+        }
+        base64 += new Array(5 - pad).join('=');
+      }
+      
+      const jsonPayload = atob(base64);
+      payload = JSON.parse(jsonPayload);
+    } catch (decodeError) {
+      console.error("Error decoding JWT:", decodeError);
+      console.error("JWT parts:", parts);
+      alert("認証情報の解析に失敗しました。");
+      return;
+    }
 
-  // ユーザー情報をUIに反映
-  updateUserInfo(payload);
+    // ユーザー情報を取得
+    currentUserId = payload.sub; // Google ID
+    currentUserName = payload.name || payload.email.split("@")[0];
 
-  // メインアプリを表示
-  showMainApp();
+    // JWTトークンをローカルストレージに保存（userIdは保存しない）
+    localStorage.setItem("googleToken", credential);
+    localStorage.setItem("userName", currentUserName);
+
+    // ユーザー情報をUIに反映
+    updateUserInfo(payload);
+
+    // メインアプリを表示
+    showMainApp();
+  } catch (error) {
+    console.error("Error in handleGoogleSignIn:", error);
+    alert("ログイン処理中にエラーが発生しました。");
+  }
 }
 
 // ユーザー情報を更新
