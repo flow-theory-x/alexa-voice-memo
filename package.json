@@ -1,6 +1,7 @@
 {
-  "name": "alexa-voice-memo",
+  "name": "showin-alexa-voice-memo",
   "version": "1.0.0",
+  "description": "松蔭（showIN） - 声でつなぐ、家族の知恵",
   "bin": {
     "alexa-voice-memo": "bin/alexa-voice-memo.js"
   },

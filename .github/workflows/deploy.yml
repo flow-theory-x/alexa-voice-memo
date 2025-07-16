@@ -63,9 +63,9 @@ jobs:
         export CDK_REGION=ap-northeast-1
         
         # Deploy CDK stack (this will also deploy the frontend from build/frontend)
-        npx cdk deploy alexa-voice-memo-${CDK_ENV} --require-approval never
+        npx cdk deploy showin-${CDK_ENV} --require-approval never
         
     - name: Deploy complete
       run: |
         echo "✅ Deployment complete!"
-        echo "🌐 Frontend URL: http://alexa-voice-memo-${CDK_ENV:-dev}-frontend.s3-website-ap-northeast-1.amazonaws.com"
+        echo "🌐 Frontend URL: http://showin-${CDK_ENV:-dev}-frontend.s3-website-ap-northeast-1.amazonaws.com"

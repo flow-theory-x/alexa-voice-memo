@@ -8,8 +8,8 @@ const environment = process.env.CDK_ENV || 'dev';
 const account = process.env.CDK_ACCOUNT;
 const region = process.env.CDK_REGION || 'ap-northeast-1';
 
-new AlexaVoiceMemoStack(app, `alexa-voice-memo-${environment}`, {
+new AlexaVoiceMemoStack(app, `showin-${environment}`, {
   env: { account, region },
-  projectName: 'alexa-voice-memo',
+  projectName: 'showin',
   environment: environment,
 });
