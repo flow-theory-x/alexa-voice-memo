@@ -6,7 +6,7 @@ const { execSync } = require('child_process');
 
 // Paths
 const projectRoot = path.join(__dirname, '..');
-const webApiTsFile = path.join(projectRoot, 'lib', 'alexa-voice-memo-stack.WebApiHandler.ts');
+const webApiTsFile = path.join(projectRoot, 'lib', 'showin-stack.WebApiHandler.ts');
 const webApiDistDir = path.join(projectRoot, 'dist', 'web-api');
 const webApiJsFile = path.join(webApiDistDir, 'index.js');
 
@@ -25,7 +25,7 @@ execSync('npx tsc', {
 });
 
 // Copy the compiled file to index.js
-const compiledFile = path.join(projectRoot, 'dist', 'lib', 'alexa-voice-memo-stack.WebApiHandler.js');
+const compiledFile = path.join(projectRoot, 'dist', 'lib', 'showin-stack.WebApiHandler.js');
 if (fs.existsSync(compiledFile)) {
   // Read the file content
   let content = fs.readFileSync(compiledFile, 'utf8');

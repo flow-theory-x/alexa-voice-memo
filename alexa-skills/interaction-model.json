@@ -1,7 +1,7 @@
 {
   "interactionModel": {
     "languageModel": {
-      "invocationName": "ボイスメモ",
+      "invocationName": "松蔭",
       "intents": [
         {
           "name": "AddMemoIntent",

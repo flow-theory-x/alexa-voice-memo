@@ -13,7 +13,7 @@ export const handler = async (event: AlexaRequest): Promise<AlexaResponse> => {
     switch (requestType) {
       case "LaunchRequest":
         return buildResponse(
-          "ボイスメモへようこそ。メモを追加、読み上げ、削除ができます。",
+          "松蔭へようこそ。声でつなぐ、家族の知恵。メモを追加、読み上げ、削除ができます。",
           false
         );
 
@@ -62,7 +62,7 @@ async function handleIntent(
 
     case "AMAZON.HelpIntent":
       return buildResponse(
-        "ボイスメモでは、メモの追加、読み上げ、削除ができます。例えば「牛乳を追加」や「一覧」と言ってください。削除は番号で「1番を削除」と指定してください。",
+        "松蔭では、メモの追加、読み上げ、削除ができます。例えば「牛乳を追加」や「一覧」と言ってください。削除は番号で「1番を削除」と指定してください。",
         false
       );
 

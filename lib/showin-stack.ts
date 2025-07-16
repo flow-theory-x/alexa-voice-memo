@@ -13,7 +13,7 @@ export interface AlexaVoiceMemoStackProps extends cdk.StackProps {
   environment: string;
 }
 
-export class AlexaVoiceMemoStack extends cdk.Stack {
+export class ShowinStack extends cdk.Stack {
   public readonly alexaLambda: lambda.Function;
   public readonly memoTable: dynamodb.Table;
   public readonly alexaRole: iam.Role;

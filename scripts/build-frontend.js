@@ -46,7 +46,7 @@ const { execSync } = require('child_process');
 let apiUrl;
 try {
   apiUrl = execSync(
-    `aws cloudformation describe-stacks --stack-name alexa-voice-memo-${env} --query 'Stacks[0].Outputs[?OutputKey==\`WebApiUrl\`].OutputValue' --output text`,
+    `aws cloudformation describe-stacks --stack-name showin-${env} --query 'Stacks[0].Outputs[?OutputKey==\`WebApiUrl\`].OutputValue' --output text`,
     { encoding: 'utf8' }
   ).trim();
   // 末尾のスラッシュを削除
