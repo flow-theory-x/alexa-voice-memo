@@ -5,7 +5,7 @@
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
 const { DynamoDBDocumentClient, ScanCommand } = require('@aws-sdk/lib-dynamodb');
 
-const TABLE_NAME = process.env.TABLE_NAME || 'alexa-voice-memo-dev-memos';
+const TABLE_NAME = process.env.TABLE_NAME || 'showin-dev-memos';
 
 async function debugFamilyMembers() {
   const client = new DynamoDBClient({ region: 'ap-northeast-1' });

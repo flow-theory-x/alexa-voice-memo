@@ -8,7 +8,7 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import { Construct } from 'constructs';
 
-export interface AlexaVoiceMemoStackProps extends cdk.StackProps {
+export interface ShowinStackProps extends cdk.StackProps {
   projectName: string;
   environment: string;
 }
@@ -18,7 +18,7 @@ export class ShowinStack extends cdk.Stack {
   public readonly memoTable: dynamodb.Table;
   public readonly alexaRole: iam.Role;
 
-  constructor(scope: Construct, id: string, props: AlexaVoiceMemoStackProps) {
+  constructor(scope: Construct, id: string, props: ShowinStackProps) {
     super(scope, id, props);
 
     const { projectName, environment } = props;

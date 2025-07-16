@@ -1,7 +1,7 @@
 {
-  "name": "alexa-voice-memo-lambda",
+  "name": "showin-lambda",
   "version": "1.0.0",
-  "description": "Lambda function for Alexa Voice Memo skill",
+  "description": "Lambda function for ShowIN skill",
   "main": "handler.js",
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.0.0",
